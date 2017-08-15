@@ -1,4 +1,4 @@
-# Welcome to TimeManager!
+﻿# Welcome to TimeManager!
 
 A plugin for QGIS by Anita Graser and Karolina Alexiou (aka carolinux)
 
@@ -97,3 +97,6 @@ Other plugin dependencies: Python module dateutil (included e.g. in matplotlib a
 
 If you are running an **older version of QGIS**, Time Manager versions <= 0.7 require QGIS 1.7 or 1.8 with Python 2.7.
 
+
+# TimeManager
+qgis中timemanager插件的二次开发
