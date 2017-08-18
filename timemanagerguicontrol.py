@@ -75,6 +75,7 @@ class TimeManagerGuiControl(QObject):
 
     showOptions = pyqtSignal()
     autoSetOptions = pyqtSignal() # 自动设置信号
+    odAnalysis = pyqtSignal()
     signalExportVideo = pyqtSignal(str, int, bool, bool, bool)
     toggleTime = pyqtSignal()
     toggleArchaeology = pyqtSignal()
@@ -107,6 +108,9 @@ class TimeManagerGuiControl(QObject):
 
         # 绑定按钮与方法
         self.dock.pushButtonAutoSet.clicked.connect(self.autoSetClicked)
+        
+        self.dock.pushButtonOdAnalysis.clicked.connect(self.odAnalysisClicked)
+        
         
         self.dock.pushButtonExportVideo.clicked.connect(self.exportVideoClicked)
         self.dock.pushButtonToggleTime.clicked.connect(self.toggleTimeClicked)
@@ -585,3 +589,7 @@ class TimeManagerGuiControl(QObject):
 
         self.vectorDialog.set()
         self.signalSaveOptions.emit()
+
+
+    def odAnalysisClicked(self):
+        self.odAnalysis.emit()

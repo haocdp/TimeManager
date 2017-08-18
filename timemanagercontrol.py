@@ -19,6 +19,9 @@ from bcdate_util import BCDate
 from conf import *
 from tmlogging import info, warn, error, log_exceptions
 
+from odAnalysis.pointInPolygon import ODAnalysis
+import threading
+
 
 class TimeManagerControl(QObject):
     """Controls the logic behind the GUI. Signals are processed here."""
@@ -96,6 +99,9 @@ class TimeManagerControl(QObject):
 
         self.guiControl.showOptions.connect(self.showOptionsDialog)
         self.guiControl.autoSetOptions.connect(self.autoSet) 
+        
+        self.guiControl.odAnalysis.connect(self.odAnalysisSet)
+        
         self.guiControl.signalExportVideo.connect(self.exportVideo)
         self.guiControl.toggleTime.connect(self.toggleTimeManagement)
         self.guiControl.toggleArchaeology.connect(self.toggleArchaeology)
@@ -680,3 +686,39 @@ class TimeManagerControl(QObject):
         else:  # if the status indicates "off"
             self.timeLayerManager.deactivateTimeManagement()
             self.guiControl.setActive(False)
+            
+            
+    def odAnalysisSet(self):
+        layers = QgsMapLayerRegistry.instance().mapLayers()
+        
+        if not layers is None and not len(layers) == 0:
+            taz = layers.get('TAZ_1112_WGS20170816150438481')
+            
+            if taz is None:
+                QMessageBox.information(self.iface.mainWindow(), 'Error',
+                                        "未找到区域图层")
+                return
+            
+            emptyLayer = layers.get('line20170817171328528')
+            
+            if emptyLayer is None:
+                QMessageBox.information(self.iface.mainWindow(), 'Error',
+                                        "未找到区域图层")
+                return
+            
+            odLayer = layers.get('tripsod20140227_220170816095623877')
+            
+            if odLayer is None:
+                QMessageBox.information(self.iface.mainWindow(), 'Error',
+                                        "未找到轨迹点图层")
+                return
+            odAnalysis = ODAnalysis(self.iface, taz, odLayer, emptyLayer)
+            odAnalysis.calculateCentroid()
+            
+            # t = threading.Thread(target=odAnalysis.drawConnectLine)
+            # t.setDaemon(True)
+            # t.start()
+            odAnalysis.drawConnectLine()
+        else:
+            QMessageBox.information(self.iface.mainWindow(), 'Error',
+                                        "获取图层出错或者没有可用图层")
