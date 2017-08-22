@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1082</width>
+    <width>1153</width>
     <height>124</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>981</width>
+    <width>1139</width>
     <height>121</height>
    </size>
   </property>
@@ -140,6 +140,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonAutoSet">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>自动设置</string>
         </property>
@@ -253,7 +256,14 @@
       <item>
        <widget class="QPushButton" name="pushButtonOdAnalysis">
         <property name="text">
-         <string>触发</string>
+         <string>生成od图层</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonSetTimeSlider">
+        <property name="text">
+         <string>设置时序</string>
         </property>
        </widget>
       </item>

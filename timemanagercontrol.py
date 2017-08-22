@@ -101,6 +101,7 @@ class TimeManagerControl(QObject):
         self.guiControl.autoSetOptions.connect(self.autoSet) 
         
         self.guiControl.odAnalysis.connect(self.odAnalysisSet)
+        self.guiControl.setTimeSliderSignal.connect(self.setTimeSlider)
         
         self.guiControl.signalExportVideo.connect(self.exportVideo)
         self.guiControl.toggleTime.connect(self.toggleTimeManagement)
@@ -722,3 +723,6 @@ class TimeManagerControl(QObject):
         else:
             QMessageBox.information(self.iface.mainWindow(), 'Error',
                                         "获取图层出错或者没有可用图层")
+
+    def setTimeSlider(self):
+        self.guiControl.initTimeSlider()

@@ -9,6 +9,8 @@ from string import replace
 import time
 from PyQt4 import uic
 from PyQt4 import QtGui as QtGui
+from qgis._core import QgsMapLayerRegistry,QgsGraduatedSymbolRendererV2, QgsVectorLayer
+from qgis.core import *
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -42,6 +44,7 @@ ADD_RASTER_LAYER_WIDGET_FILE = "addRasterLayer.ui"
 ARCH_WIDGET_FILE = "arch.ui"
 OPTIONS_WIDGET_FILE = "options.ui"
 ANIMATION_WIDGET_FILE = "animate.ui"
+SELECT_VECTOR_LAYER = "selectVectorLayer.ui"
 
 
 class TimestampLabelConfig(object):
@@ -73,9 +76,14 @@ class TimestampLabelConfig(object):
 class TimeManagerGuiControl(QObject):
     """This class controls all plugin-related GUI elements. Emitted signals are defined here."""
 
+    setFlag = 0
+
     showOptions = pyqtSignal()
     autoSetOptions = pyqtSignal() # 自动设置信号
     odAnalysis = pyqtSignal()
+    
+    setTimeSliderSignal = pyqtSignal()
+    
     signalExportVideo = pyqtSignal(str, int, bool, bool, bool)
     toggleTime = pyqtSignal()
     toggleArchaeology = pyqtSignal()
@@ -109,8 +117,11 @@ class TimeManagerGuiControl(QObject):
         # 绑定按钮与方法
         self.dock.pushButtonAutoSet.clicked.connect(self.autoSetClicked)
         
+        # od分析
         self.dock.pushButtonOdAnalysis.clicked.connect(self.odAnalysisClicked)
         
+        # self.dock.pushButtonSetTimeSlider.clicked.connect(self.setTimeSlider)
+        self.dock.pushButtonSetTimeSlider.clicked.connect(self.showSelectVectorLayer)
         
         self.dock.pushButtonExportVideo.clicked.connect(self.exportVideoClicked)
         self.dock.pushButtonToggleTime.clicked.connect(self.toggleTimeClicked)
@@ -119,7 +130,9 @@ class TimeManagerGuiControl(QObject):
         self.dock.pushButtonForward.clicked.connect(self.forwardClicked)
         self.dock.pushButtonPlay.clicked.connect(self.playClicked)
         self.dock.dateTimeEditCurrentTime.dateTimeChanged.connect(self.currentTimeChangedDateText)
+        
         self.dock.horizontalTimeSlider.valueChanged.connect(self.currentTimeChangedSlider)
+            
         self.dock.comboBoxTimeExtent.currentIndexChanged[str].connect(
             self.currentTimeFrameTypeChanged)
         self.dock.spinBoxTimeExtent.valueChanged.connect(self.currentTimeFrameSizeChanged)
@@ -150,6 +163,8 @@ class TimeManagerGuiControl(QObject):
             self.iface.addPluginToMenu("&TimeManager", self.action)
         except:
             pass  # OK for testing
+        
+        self.layer = None
 
     def getLabelFormat(self):
         return self.labelOptions.fmt
@@ -593,3 +608,140 @@ class TimeManagerGuiControl(QObject):
 
     def odAnalysisClicked(self):
         self.odAnalysis.emit()
+        
+    # 显示选择图层的窗口
+    def showSelectVectorLayer(self):
+        self.selectLayerDialog = uic.loadUi(os.path.join(self.path, SELECT_VECTOR_LAYER))
+        layers = self.iface.legendInterface().layers()
+        layer_list = []
+        for layer in layers:
+            layer_list.append(layer.name())
+        self.selectLayerDialog.comboBox.addItems(layer_list)
+        self.selectLayerDialog.show()
+        
+        result = self.selectLayerDialog.exec_()
+        if result:
+            # self.selectLayerDialog.buttonBox.accepted.connect(setTimeSlider)
+            selectedLayerIndex = self.selectLayerDialog.comboBox.currentIndex()
+            self.layer = layers[selectedLayerIndex]
+            if not isinstance(self.layer, QgsVectorLayer) :
+                QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层不是矢量图层')
+            elif self.layer.featureCount() == 0:
+                QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层元素为空')
+            elif not self.layer.geometryType() == QGis.Line :
+                QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层不是直线图层')
+            elif not isinstance(self.layer.rendererV2(),QgsGraduatedSymbolRendererV2) :
+                QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层未进行递进样式设置')
+            else :
+                self.setTimeSlider()
+    
+    # 设置时间序列为24个小时按每小时刷新
+    def setTimeSlider(self):
+        
+        if self.setFlag == 0:
+            self.setFlag = 1
+            self.dock.pushButtonOptions.setDisabled(True)
+            self.dock.dateTimeEditCurrentTime.setDisabled(True)
+            self.dock.pushButtonOdAnalysis.setDisabled(True)
+            self.dock.pushButtonBack.setDisabled(True)
+            self.dock.pushButtonForward.setDisabled(True)
+            self.dock.spinBoxTimeExtent.setValue(1)
+            self.setTimeFrameType(u'小时')
+            
+            self.dock.spinBoxTimeExtent.setDisabled(True)
+            self.dock.comboBoxTimeExtent.setDisabled(True)
+            
+            # 当设置为时序控制时绑定不同的触发方法
+            self.dock.horizontalTimeSlider.valueChanged.connect(self.timeSliderChanged)
+            self.dock.pushButtonPlay.clicked.connect(self.autoPlay)
+            
+            self.dock.pushButtonSetTimeSlider.setText(u"取消设置")
+            
+            self.signalTimeFrameType.emit(u'小时')
+            self.setTimeSliderSignal.emit()
+        else :
+            self.setFlag = 0
+            self.dock.pushButtonOptions.setDisabled(False)
+            self.dock.dateTimeEditCurrentTime.setDisabled(False)
+            self.dock.pushButtonOdAnalysis.setDisabled(False)
+            self.dock.pushButtonBack.setDisabled(False)
+            self.dock.pushButtonForward.setDisabled(False)
+            self.dock.spinBoxTimeExtent.setDisabled(False)
+            self.dock.comboBoxTimeExtent.setDisabled(False)
+            
+            self.dock.pushButtonSetTimeSlider.setText(u"设置时序")
+            
+            # self.qTimer = None
+            # self.layer = None
+            self.dock.horizontalTimeSlider.valueChanged.connect(self.currentTimeChangedSlider)
+            self.dock.pushButtonPlay.clicked.connect(self.playClicked)
+            
+    def initTimeSlider(self):
+        # layers = QgsMapLayerRegistry.instance().mapLayers()
+        # items = layers.items()
+        # keys = [x[0] for x in layers.items() if 'line2' in x[1]]
+        # self.layer = layers.get(keys[0])
+        # self.layer = layers.get('line220170821165451339')
+        
+        min = 1
+        max = 24
+        step = 1
+        self.dock.labelStartTime.setText(str(min))
+        self.dock.labelEndTime.setText(str(max))
+        self.dock.horizontalTimeSlider.setMinimum(min)
+        self.dock.horizontalTimeSlider.setMaximum(max)
+        self.dock.horizontalTimeSlider.setSingleStep(step)
+        #self.dock.horizontalTimeSlider.valueChanged.connect(self.timeSliderChanged)
+        
+        # 定时器
+        self.qTimer = QTimer(self)
+        self.qTimer.timeout.connect(self.incrementValue)
+        
+    # 时序值改变时触发的方法：修改图层渲染属性
+    def timeSliderChanged(self, value=None):
+        if value == None:
+            value = self.dock.horizontalTimeSlider.value()
+            
+        if value <= 24:
+            renderer = self.layer.rendererV2()
+            renderer.setClassAttribute(str(value))
+            self.layer.setRendererV2(renderer)
+            
+            if hasattr(self.layer, "setCacheImage"):
+                self.layer.setCacheImage(None)
+            
+            self.layer.triggerRepaint()
+            self.iface.legendInterface().refreshLayerSymbology(self.layer)
+            
+            # self.layer.reload()
+            # mapCanvas = self.iface.mapCanvas()
+            # mapCanvas.refresh()
+            # qgs.refreshSymbols(self.iface, self.layer)
+        else:
+            self.qTimer.stop()
+            self.dock.horizontalTimeSlider.setValue(1)
+        
+    # 自动播放按钮
+    def autoPlay(self):
+        if self.dock.pushButtonPlay.isChecked():
+            self.dock.pushButtonPlay.setIcon(QIcon(":/images/pause.png"))
+            time = 1000
+            self.qTimer.start(time)
+        else:
+            self.dock.pushButtonPlay.setIcon(QIcon(":/images/play.png"))
+            self.qTimer.stop()
+            
+        
+    def incrementValue(self):
+        value = self.dock.horizontalTimeSlider.value()
+        if value == 24:
+            self.qTimer.stop()
+            self.dock.horizontalTimeSlider.setValue(1)
+            self.dock.pushButtonPlay.setChecked(False)
+            self.dock.pushButtonPlay.setIcon(QIcon(":/images/play.png"))
+            return
+        self.dock.horizontalTimeSlider.setValue(value + 1)
