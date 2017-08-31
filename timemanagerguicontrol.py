@@ -45,6 +45,7 @@ ARCH_WIDGET_FILE = "arch.ui"
 OPTIONS_WIDGET_FILE = "options.ui"
 ANIMATION_WIDGET_FILE = "animate.ui"
 SELECT_VECTOR_LAYER = "selectVectorLayer.ui"
+GENERATE_OD = "generateOd.ui"
 
 
 class TimestampLabelConfig(object):
@@ -119,9 +120,16 @@ class TimeManagerGuiControl(QObject):
         
         # od分析
         self.dock.pushButtonOdAnalysis.clicked.connect(self.odAnalysisClicked)
+        # 计算OD强度
+        # self.dock.pushButtonAnalysis.clicked.connect(self.generateOdData)
         
         # self.dock.pushButtonSetTimeSlider.clicked.connect(self.setTimeSlider)
         self.dock.pushButtonSetTimeSlider.clicked.connect(self.showSelectVectorLayer)
+        self.dock.pushButtonSetPolygonTimeSlider.clicked.connect(self.showSelectRegionLayer)
+        
+        self.dock.radioButton_origin.hide()
+        self.dock.radioButton_destination.hide()
+        
         
         self.dock.pushButtonExportVideo.clicked.connect(self.exportVideoClicked)
         self.dock.pushButtonToggleTime.clicked.connect(self.toggleTimeClicked)
@@ -611,33 +619,37 @@ class TimeManagerGuiControl(QObject):
         
     # 显示选择图层的窗口
     def showSelectVectorLayer(self):
-        self.selectLayerDialog = uic.loadUi(os.path.join(self.path, SELECT_VECTOR_LAYER))
-        layers = self.iface.legendInterface().layers()
-        layer_list = []
-        for layer in layers:
-            layer_list.append(layer.name())
-        self.selectLayerDialog.comboBox.addItems(layer_list)
-        self.selectLayerDialog.show()
+        if self.setFlag == 0:
+            self.selectLayerDialog = uic.loadUi(os.path.join(self.path, SELECT_VECTOR_LAYER))
+            layers = self.iface.legendInterface().layers()
+            layer_list = []
+            for layer in layers:
+                layer_list.append(layer.name())
+            self.selectLayerDialog.comboBox.addItems(layer_list)
+            
+            # 隐藏单选框
+            # self.selectLayerDialog.label_2.hide()
+            
+            self.selectLayerDialog.show()
         
-        result = self.selectLayerDialog.exec_()
-        if result:
-            # self.selectLayerDialog.buttonBox.accepted.connect(setTimeSlider)
-            selectedLayerIndex = self.selectLayerDialog.comboBox.currentIndex()
-            self.layer = layers[selectedLayerIndex]
-            if not isinstance(self.layer, QgsVectorLayer) :
-                QMessageBox.information(self.iface.mainWindow(), 'Info',
+            result = self.selectLayerDialog.exec_()
+            if result:
+                # self.selectLayerDialog.buttonBox.accepted.connect(setTimeSlider)
+                selectedLayerIndex = self.selectLayerDialog.comboBox.currentIndex()
+                self.layer = layers[selectedLayerIndex]
+                if not isinstance(self.layer, QgsVectorLayer) :
+                    QMessageBox.information(self.iface.mainWindow(), 'Info',
                                     u'图层不是矢量图层')
-            elif self.layer.featureCount() == 0:
-                QMessageBox.information(self.iface.mainWindow(), 'Info',
+                elif self.layer.featureCount() == 0:
+                    QMessageBox.information(self.iface.mainWindow(), 'Info',
                                     u'图层元素为空')
-            elif not self.layer.geometryType() == QGis.Line :
-                QMessageBox.information(self.iface.mainWindow(), 'Info',
+                elif not self.layer.geometryType() == QGis.Line :
+                    QMessageBox.information(self.iface.mainWindow(), 'Info',
                                     u'图层不是直线图层')
-            elif not isinstance(self.layer.rendererV2(),QgsGraduatedSymbolRendererV2) :
-                QMessageBox.information(self.iface.mainWindow(), 'Info',
-                                    u'图层未进行递进样式设置')
-            else :
-                self.setTimeSlider()
+                else :
+                    self.setTimeSlider()
+        else:
+            self.setTimeSlider()
     
     # 设置时间序列为24个小时按每小时刷新
     def setTimeSlider(self):
@@ -654,7 +666,8 @@ class TimeManagerGuiControl(QObject):
             
             self.dock.spinBoxTimeExtent.setDisabled(True)
             self.dock.comboBoxTimeExtent.setDisabled(True)
-            
+            self.dock.pushButtonSetPolygonTimeSlider.setDisabled(True)
+            self.setTimeSliderSignal.emit()
             # 当设置为时序控制时绑定不同的触发方法
             self.dock.horizontalTimeSlider.valueChanged.connect(self.timeSliderChanged)
             self.dock.pushButtonPlay.clicked.connect(self.autoPlay)
@@ -662,7 +675,8 @@ class TimeManagerGuiControl(QObject):
             self.dock.pushButtonSetTimeSlider.setText(u"取消设置")
             
             self.signalTimeFrameType.emit(u'小时')
-            self.setTimeSliderSignal.emit()
+            
+            # self.initTimeSlider()
         else :
             self.setFlag = 0
             self.dock.pushButtonOptions.setDisabled(False)
@@ -672,8 +686,9 @@ class TimeManagerGuiControl(QObject):
             self.dock.pushButtonForward.setDisabled(False)
             self.dock.spinBoxTimeExtent.setDisabled(False)
             self.dock.comboBoxTimeExtent.setDisabled(False)
+            self.dock.pushButtonSetPolygonTimeSlider.setDisabled(False)
             
-            self.dock.pushButtonSetTimeSlider.setText(u"设置时序")
+            self.dock.pushButtonSetTimeSlider.setText(u"设置连接线时序")
             
             # self.qTimer = None
             # self.layer = None
@@ -701,26 +716,90 @@ class TimeManagerGuiControl(QObject):
         self.qTimer = QTimer(self)
         self.qTimer.timeout.connect(self.incrementValue)
         
+        # 渲染样式
+        myRangeList = []
+        
+        # symbol 1
+        myMin = 0.0
+        myMax = 2000.0
+        myLabel = '0.0 - 2000.0'
+        myColour = QtGui.QColor('#fff5eb')
+        mySymbol1 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol1.setColor(myColour)
+        mySymbol1.setAlpha(0)
+        mySymbol1.setWidth(0)
+        myRange1 = QgsRendererRangeV2(myMin, myMax, mySymbol1, myLabel)
+        myRangeList.append(myRange1)
+        
+        # symbol 2
+        myMin = 2000.0
+        myMax = 4000.0
+        myLabel = '2000.0 - 4000.0'
+        myColour = QtGui.QColor('#fdd1a5')
+        mySymbol2 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol2.setColor(myColour)
+        mySymbol2.setAlpha(0.2)
+        mySymbol2.setWidth(0.5)
+        myRange2 = QgsRendererRangeV2(myMin, myMax, mySymbol2, myLabel)
+        myRangeList.append(myRange2)
+        
+        # symbol 3
+        myMin = 4000.0
+        myMax = 6000.0
+        myLabel = '4000.0 - 6000.0'
+        myColour = QtGui.QColor('#fd9243')
+        mySymbol3 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol3.setColor(myColour)
+        mySymbol3.setAlpha(0.4)
+        mySymbol3.setWidth(0.8)
+        myRange3 = QgsRendererRangeV2(myMin, myMax, mySymbol3, myLabel)
+        myRangeList.append(myRange3)
+        
+        # symbol 4
+        myMin = 6000.0
+        myMax = 8000.0
+        myLabel = '6000.0 - 8000.0'
+        myColour = QtGui.QColor('#de4f05')
+        mySymbol4 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol4.setColor(myColour)
+        mySymbol4.setAlpha(0.6)
+        mySymbol4.setWidth(1)
+        myRange4 = QgsRendererRangeV2(myMin, myMax, mySymbol4, myLabel)
+        myRangeList.append(myRange4)
+        
+        # symbol 5
+        myMin = 8000.0
+        myMax = 10000.0
+        myLabel = '8000.0 - 10000.0'
+        myColour = QtGui.QColor('#7f2704')
+        mySymbol5 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol5.setColor(myColour)
+        mySymbol5.setAlpha(1)
+        mySymbol5.setWidth(1.3)
+        myRange5 = QgsRendererRangeV2(myMin, myMax, mySymbol5, myLabel)
+        myRangeList.append(myRange5)
+        
+        self.myRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
+        self.myRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
+        
     # 时序值改变时触发的方法：修改图层渲染属性
     def timeSliderChanged(self, value=None):
         if value == None:
-            value = self.dock.horizontalTimeSlider.value()
+            value = self.dock.horizontalTimeSlider.value() 
             
         if value <= 24:
-            renderer = self.layer.rendererV2()
-            renderer.setClassAttribute(str(value))
-            self.layer.setRendererV2(renderer)
+            self.myRenderer.setClassAttribute(str(value))
+            self.layer.setRendererV2(self.myRenderer)
+            
+            # renderer = self.layer.rendererV2()
+            # renderer.setClassAttribute(str(value))
+            # self.layer.setRendererV2(renderer)
             
             if hasattr(self.layer, "setCacheImage"):
                 self.layer.setCacheImage(None)
             
             self.layer.triggerRepaint()
             self.iface.legendInterface().refreshLayerSymbology(self.layer)
-            
-            # self.layer.reload()
-            # mapCanvas = self.iface.mapCanvas()
-            # mapCanvas.refresh()
-            # qgs.refreshSymbols(self.iface, self.layer)
         else:
             self.qTimer.stop()
             self.dock.horizontalTimeSlider.setValue(1)
@@ -745,3 +824,323 @@ class TimeManagerGuiControl(QObject):
             self.dock.pushButtonPlay.setIcon(QIcon(":/images/play.png"))
             return
         self.dock.horizontalTimeSlider.setValue(value + 1)
+        
+    # "生成od数据"按钮点击触发
+    def generateOdData(self):
+        self.generateOdDialog = uic.loadUi(os.path.join(self.path, GENERATE_OD))
+        layers = self.iface.legendInterface().layers()
+        layer_list = []
+        for layer in layers:
+            layer_list.append(layer.name())
+        self.generateOdDialog.comboBox.addItems(layer_list)
+        self.generateOdDialog.comboBox_2.addItems(layer_list)
+        self.generateOdDialog.comboBox_3.addItems(layer_list)
+        self.generateOdDialog.show()
+        
+        self.generateOdDialog.pushButton.clicked.connect(self.generateOdDialog_accepted)
+        
+    
+    def generateOdDialog_accepted(self):
+        regionLayerIndex = self.generateOdDialog.comboBox.currentIndex()
+        lineLayerIndex = self.generateOdDialog.comboBox_2.currentIndex()
+        pointLayerIndex = self.generateOdDialog.comboBox_3.currentIndex()
+        
+        layers = self.iface.legendInterface().layers()
+        self.regionLayer = layers[regionLayerIndex]
+        self.lineLayer = layers[lineLayerIndex]
+        self.pointLayer = layers[pointLayerIndex]
+        
+        if not isinstance(self.regionLayer, QgsVectorLayer) :
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'区域图层不是矢量图层')
+        elif self.regionLayer.featureCount() == 0:
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'区域图层元素为空')
+        elif not self.regionLayer.geometryType() == QGis.Polygon :
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'区域图层不是多边形图层')
+        
+        elif not isinstance(self.lineLayer, QgsVectorLayer) :
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'直线图层不是矢量图层')
+        elif self.lineLayer.featureCount() == 0:
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'直线图层元素为空')
+        elif not self.lineLayer.geometryType() == QGis.Line :
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'直线图层不是直线图层')
+            
+        elif not isinstance(self.pointLayer, QgsVectorLayer) :
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'轨迹点图层不是矢量图层')
+        elif self.pointLayer.featureCount() == 0:
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'轨迹点图层元素为空')
+        elif not self.pointLayer.geometryType() == QGis.Point :
+            QMessageBox.information(self.iface.mainWindow(), 'Info',
+                            u'轨迹点图层不是点图层')
+        else :
+            self.calculateOd()
+    
+    def calculateOd(self):
+        pointFeatures = self.pointLayer.getFeatures()
+        polygonFeatures = self.regionLayer.getFeatures()
+        lineFeatures = self.lineLayer.getFeatures()
+        
+        count = 0
+        totalNum = self.pointLayer.featureCount()
+        
+        self.generateOdDialog.progressBar.setRange(0, totalNum)
+        
+        for pointFeature in pointFeatures:
+            origin_longitude = pointFeature['origin_longitude']
+            origin_latitude = pointFeature['origin_latitude']
+            destination_longitude = pointFeature['destination_longitude']
+            destination_latitude = pointFeature['destination_latitude']
+            destination_time = pointFeature['destination_time']
+            
+            for polygonFeature in polygonFeatures:
+                if polygonFeature.geometry().contains(QgsPoint(origin_longitude, origin_latitude)):
+                    originRegionId = polygonFeature.id()
+        pass
+    
+    
+    def showSelectRegionLayer(self):
+        if self.setFlag == 0:
+            self.selectLayerDialog = uic.loadUi(os.path.join(self.path, SELECT_VECTOR_LAYER))
+            layers = self.iface.legendInterface().layers()
+            layer_list = []
+            for layer in layers:
+                layer_list.append(layer.name())
+            self.selectLayerDialog.comboBox.addItems(layer_list)
+            self.selectLayerDialog.show()
+            
+            
+        
+            result = self.selectLayerDialog.exec_()
+            if result:
+                # self.selectLayerDialog.buttonBox.accepted.connect(setTimeSlider)
+                selectedLayerIndex = self.selectLayerDialog.comboBox.currentIndex()
+                self.regionLayer = layers[selectedLayerIndex]
+                if not isinstance(self.regionLayer, QgsVectorLayer) :
+                    QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层不是矢量图层')
+                elif self.regionLayer.featureCount() == 0:
+                    QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层元素为空')
+                elif not self.regionLayer.geometryType() == QGis.Polygon :
+                    QMessageBox.information(self.iface.mainWindow(), 'Info',
+                                    u'图层不是区域图层')
+                else :
+                    
+                    self.dock.radioButton_destination.toggled.connect(self.initRender)
+                    
+                    self.dock.radioButton_origin.toggled.connect(self.initRender)
+                    self.setPolygonTimeSlider()
+                    
+        else:
+            self.setPolygonTimeSlider()
+            
+    def setPolygonTimeSlider(self):
+        if self.setFlag == 0:
+            self.setFlag = 1
+            self.dock.pushButtonOptions.setDisabled(True)
+            self.dock.dateTimeEditCurrentTime.setDisabled(True)
+            self.dock.pushButtonOdAnalysis.setDisabled(True)
+            self.dock.pushButtonBack.setDisabled(True)
+            self.dock.pushButtonForward.setDisabled(True)
+            self.dock.spinBoxTimeExtent.setValue(1)
+            self.setTimeFrameType(u'小时')
+            
+            self.dock.spinBoxTimeExtent.setDisabled(True)
+            self.dock.comboBoxTimeExtent.setDisabled(True)
+            self.dock.pushButtonSetTimeSlider.setDisabled(True)
+            self.initPolygonTimeSlider()
+            
+            self.dock.radioButton_destination.show()
+            self.dock.radioButton_origin.show()
+            
+            # 当设置为时序控制时绑定不同的触发方法
+            self.dock.horizontalTimeSlider.valueChanged.connect(self.polygonTimeSliderChanged)
+            self.dock.pushButtonPlay.clicked.connect(self.autoPlay)
+            
+            self.dock.pushButtonSetPolygonTimeSlider.setText(u"取消设置")
+            
+            self.signalTimeFrameType.emit(u'小时')
+            
+            
+        else :
+            self.setFlag = 0
+            self.dock.pushButtonOptions.setDisabled(False)
+            self.dock.dateTimeEditCurrentTime.setDisabled(False)
+            self.dock.pushButtonOdAnalysis.setDisabled(False)
+            self.dock.pushButtonBack.setDisabled(False)
+            self.dock.pushButtonForward.setDisabled(False)
+            self.dock.spinBoxTimeExtent.setDisabled(False)
+            self.dock.comboBoxTimeExtent.setDisabled(False)
+            self.dock.pushButtonSetTimeSlider.setDisabled(False)
+            
+            self.dock.radioButton_destination.hide()
+            self.dock.radioButton_origin.hide()
+            
+            self.dock.pushButtonSetPolygonTimeSlider.setText(u"设置区域时序")
+            
+            # self.qTimer = None
+            # self.layer = None
+            self.dock.horizontalTimeSlider.valueChanged.connect(self.currentTimeChangedSlider)
+            self.dock.pushButtonPlay.clicked.connect(self.playClicked)
+            
+            
+    def initRender(self):
+        # 渲染样式
+        myRangeList = []
+        
+        # symbol 1
+        myMin = 0.0
+        myMax = 1400.0
+        myLabel = '0.0 - 1400.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#deebf7')
+        else:
+            myColour = QtGui.QColor('#e5f5e0')
+        mySymbol1 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol1.setColor(myColour)
+        mySymbol1.setAlpha(1)
+        # mySymbol1.setWidth(0)
+        myRange1 = QgsRendererRangeV2(myMin, myMax, mySymbol1, myLabel)
+        myRangeList.append(myRange1)
+        
+        # symbol 2
+        myMin = 1400.0
+        myMax = 2800.0
+        myLabel = '1400.0 - 2800.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#c6dbef')
+        else:
+            myColour = QtGui.QColor('#c7e9c0')
+        mySymbol2 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol2.setColor(myColour)
+        mySymbol2.setAlpha(1)
+        # mySymbol2.setWidth(0.5)
+        myRange2 = QgsRendererRangeV2(myMin, myMax, mySymbol2, myLabel)
+        myRangeList.append(myRange2)
+        
+        # symbol 3
+        myMin = 2800.0
+        myMax = 4200.0
+        myLabel = '2800.0 - 4200.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#9ecae1')
+        else:
+            myColour = QtGui.QColor('#a1d99b')
+        mySymbol3 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol3.setColor(myColour)
+        mySymbol3.setAlpha(1)
+        # mySymbol3.setWidth(0.8)
+        myRange3 = QgsRendererRangeV2(myMin, myMax, mySymbol3, myLabel)
+        myRangeList.append(myRange3)
+        
+        # symbol 4
+        myMin = 4200.0
+        myMax = 5600.0
+        myLabel = '4200.0 - 5600.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#6baed6')
+        else:
+            myColour = QtGui.QColor('#74c476')
+        mySymbol4 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol4.setColor(myColour)
+        mySymbol4.setAlpha(1)
+        # mySymbol4.setWidth(1)
+        myRange4 = QgsRendererRangeV2(myMin, myMax, mySymbol4, myLabel)
+        myRangeList.append(myRange4)
+        
+        # symbol 5
+        myMin = 5600.0
+        myMax = 7000.0
+        myLabel = '5600.0 - 7000.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#4292c6')
+        else:
+            myColour = QtGui.QColor('#41ab5d')
+        mySymbol5 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol5.setColor(myColour)
+        mySymbol5.setAlpha(1)
+        # mySymbol5.setWidth(1.3)
+        myRange5 = QgsRendererRangeV2(myMin, myMax, mySymbol5, myLabel)
+        myRangeList.append(myRange5)
+        
+        # symbol 6
+        myMin = 7000.0
+        myMax = 8400.0
+        myLabel = '7000.0 - 8400.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#2171b5')
+        else:
+            myColour = QtGui.QColor('#238b45')
+        mySymbol6 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol6.setColor(myColour)
+        mySymbol6.setAlpha(1)
+        # mySymbol5.setWidth(1.3)
+        myRange6 = QgsRendererRangeV2(myMin, myMax, mySymbol6, myLabel)
+        myRangeList.append(myRange6)
+        
+        # symbol 7
+        myMin = 8400.0
+        myMax = 10000.0
+        myLabel = '8400.0 - 10000.0'
+        if self.dock.radioButton_origin.isChecked():
+            myColour = QtGui.QColor('#08519c')
+        else:
+            myColour = QtGui.QColor('#006d2c')
+        mySymbol7 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol7.setColor(myColour)
+        mySymbol7.setAlpha(1)
+        # mySymbol7.setWidth(1.3)
+        myRange7 = QgsRendererRangeV2(myMin, myMax, mySymbol7, myLabel)
+        myRangeList.append(myRange7)
+        
+        self.myRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
+        self.myRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
+        
+    def initPolygonTimeSlider(self):
+        min = 1
+        max = 24
+        step = 1
+        self.dock.labelStartTime.setText(str(min))
+        self.dock.labelEndTime.setText(str(max))
+        self.dock.horizontalTimeSlider.setMinimum(min)
+        self.dock.horizontalTimeSlider.setMaximum(max)
+        self.dock.horizontalTimeSlider.setSingleStep(step)
+        #self.dock.horizontalTimeSlider.valueChanged.connect(self.timeSliderChanged)
+        
+        # 定时器
+        self.qTimer = QTimer(self)
+        self.qTimer.timeout.connect(self.incrementValue)
+        
+        self.initRender()
+    
+    def polygonTimeSliderChanged(self, value = None):
+        if value == None:
+            value = self.dock.horizontalTimeSlider.value() 
+            
+        if value <= 24:
+            if self.dock.radioButton_origin.isChecked():
+                self.myRenderer.setClassAttribute(str(value) + "_o")
+            else:
+                self.myRenderer.setClassAttribute(str(value) + "_d")
+            self.regionLayer.setRendererV2(self.myRenderer)
+            
+            # renderer = self.layer.rendererV2()
+            # renderer.setClassAttribute(str(value))
+            # self.layer.setRendererV2(renderer)
+            
+            if hasattr(self.regionLayer, "setCacheImage"):
+                self.regionLayer.setCacheImage(None)
+            
+            self.regionLayer.triggerRepaint()
+            self.iface.legendInterface().refreshLayerSymbology(self.regionLayer)
+        else:
+            self.qTimer.stop()
+            self.dock.horizontalTimeSlider.setValue(1)
+        pass
