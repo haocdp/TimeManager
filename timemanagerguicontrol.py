@@ -934,7 +934,6 @@ class TimeManagerGuiControl(QObject):
                 else :
                     
                     self.dock.radioButton_destination.toggled.connect(self.initRender)
-                    
                     self.dock.radioButton_origin.toggled.connect(self.initRender)
                     self.setPolygonTimeSlider()
                     
@@ -1100,8 +1099,8 @@ class TimeManagerGuiControl(QObject):
         myRange7 = QgsRendererRangeV2(myMin, myMax, mySymbol7, myLabel)
         myRangeList.append(myRange7)
         
-        self.myRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
-        self.myRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
+        self.myPolygonRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
+        self.myPolygonRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
         
     def initPolygonTimeSlider(self):
         min = 1
@@ -1126,10 +1125,10 @@ class TimeManagerGuiControl(QObject):
             
         if value <= 24:
             if self.dock.radioButton_origin.isChecked():
-                self.myRenderer.setClassAttribute(str(value) + "_o")
+                self.myPolygonRenderer.setClassAttribute(str(value) + "_o")
             else:
-                self.myRenderer.setClassAttribute(str(value) + "_d")
-            self.regionLayer.setRendererV2(self.myRenderer)
+                self.myPolygonRenderer.setClassAttribute(str(value) + "_d")
+            self.regionLayer.setRendererV2(self.myPolygonRenderer)
             
             # renderer = self.layer.rendererV2()
             # renderer.setClassAttribute(str(value))
