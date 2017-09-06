@@ -46,7 +46,10 @@ OPTIONS_WIDGET_FILE = "options.ui"
 ANIMATION_WIDGET_FILE = "animate.ui"
 SELECT_VECTOR_LAYER = "selectVectorLayer.ui"
 GENERATE_OD = "generateOd.ui"
+BROSWER_DIALOG = "webView.ui"
 
+# TAZ分隔区间数组
+TAZ_INTENSITY_THRESHOLD = [0, 80.0, 160.0, 240.0, 320.0, 400.0, 480.0, 560.0]
 
 class TimestampLabelConfig(object):
     """Object that has the settings for rendering timestamp labels. Can be customized via the UI"""
@@ -59,6 +62,7 @@ class TimestampLabelConfig(object):
     color = 'black'  # Text color as name, rgb(RR,GG,BB), or #XXXXXX
     bgcolor = 'white'  # Background color as name, rgb(RR,GG,BB), or #XXXXXX
     type ="dt"
+    
 
     def __init__(self, model):
         self.model = model
@@ -130,6 +134,7 @@ class TimeManagerGuiControl(QObject):
         self.dock.radioButton_origin.hide()
         self.dock.radioButton_destination.hide()
         
+        self.dock.pushButtonBroswerDialog.clicked.connect(self.showBroswerDialog)
         
         self.dock.pushButtonExportVideo.clicked.connect(self.exportVideoClicked)
         self.dock.pushButtonToggleTime.clicked.connect(self.toggleTimeClicked)
@@ -995,13 +1000,14 @@ class TimeManagerGuiControl(QObject):
         myRangeList = []
         
         # symbol 1
-        myMin = 0.0
-        myMax = 1400.0
-        myLabel = '0.0 - 1400.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[0]
+        myMax = TAZ_INTENSITY_THRESHOLD[1]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[0]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[1])
         if self.dock.radioButton_origin.isChecked():
-            myColour = QtGui.QColor('#deebf7')
+            #myColour = QtGui.QColor('#deebf7')
+            myColour = QtGui.QColor('#ffffff')
         else:
-            myColour = QtGui.QColor('#e5f5e0')
+            myColour = QtGui.QColor('#ffffff')
         mySymbol1 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
         mySymbol1.setColor(myColour)
         mySymbol1.setAlpha(1)
@@ -1010,9 +1016,9 @@ class TimeManagerGuiControl(QObject):
         myRangeList.append(myRange1)
         
         # symbol 2
-        myMin = 1400.0
-        myMax = 2800.0
-        myLabel = '1400.0 - 2800.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[1]
+        myMax = TAZ_INTENSITY_THRESHOLD[2]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[1]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[2])
         if self.dock.radioButton_origin.isChecked():
             myColour = QtGui.QColor('#c6dbef')
         else:
@@ -1025,9 +1031,9 @@ class TimeManagerGuiControl(QObject):
         myRangeList.append(myRange2)
         
         # symbol 3
-        myMin = 2800.0
-        myMax = 4200.0
-        myLabel = '2800.0 - 4200.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[2]
+        myMax = TAZ_INTENSITY_THRESHOLD[3]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[2]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[3])
         if self.dock.radioButton_origin.isChecked():
             myColour = QtGui.QColor('#9ecae1')
         else:
@@ -1040,9 +1046,9 @@ class TimeManagerGuiControl(QObject):
         myRangeList.append(myRange3)
         
         # symbol 4
-        myMin = 4200.0
-        myMax = 5600.0
-        myLabel = '4200.0 - 5600.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[3]
+        myMax = TAZ_INTENSITY_THRESHOLD[4]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[3]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[4])
         if self.dock.radioButton_origin.isChecked():
             myColour = QtGui.QColor('#6baed6')
         else:
@@ -1055,9 +1061,9 @@ class TimeManagerGuiControl(QObject):
         myRangeList.append(myRange4)
         
         # symbol 5
-        myMin = 5600.0
-        myMax = 7000.0
-        myLabel = '5600.0 - 7000.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[4]
+        myMax = TAZ_INTENSITY_THRESHOLD[5]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[4]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[5])
         if self.dock.radioButton_origin.isChecked():
             myColour = QtGui.QColor('#4292c6')
         else:
@@ -1070,9 +1076,9 @@ class TimeManagerGuiControl(QObject):
         myRangeList.append(myRange5)
         
         # symbol 6
-        myMin = 7000.0
-        myMax = 8400.0
-        myLabel = '7000.0 - 8400.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[5]
+        myMax = TAZ_INTENSITY_THRESHOLD[6]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[5]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[6])
         if self.dock.radioButton_origin.isChecked():
             myColour = QtGui.QColor('#2171b5')
         else:
@@ -1085,9 +1091,9 @@ class TimeManagerGuiControl(QObject):
         myRangeList.append(myRange6)
         
         # symbol 7
-        myMin = 8400.0
-        myMax = 10000.0
-        myLabel = '8400.0 - 10000.0'
+        myMin = TAZ_INTENSITY_THRESHOLD[6]
+        myMax = TAZ_INTENSITY_THRESHOLD[7]
+        myLabel = str(TAZ_INTENSITY_THRESHOLD[6]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[7])
         if self.dock.radioButton_origin.isChecked():
             myColour = QtGui.QColor('#08519c')
         else:
@@ -1125,9 +1131,9 @@ class TimeManagerGuiControl(QObject):
             
         if value <= 24:
             if self.dock.radioButton_origin.isChecked():
-                self.myPolygonRenderer.setClassAttribute(str(value) + "_o")
+                self.myPolygonRenderer.setClassAttribute("o" + str(value))
             else:
-                self.myPolygonRenderer.setClassAttribute(str(value) + "_d")
+                self.myPolygonRenderer.setClassAttribute("d" + str(value))
             self.regionLayer.setRendererV2(self.myPolygonRenderer)
             
             # renderer = self.layer.rendererV2()
@@ -1143,3 +1149,11 @@ class TimeManagerGuiControl(QObject):
             self.qTimer.stop()
             self.dock.horizontalTimeSlider.setValue(1)
         pass
+    
+    
+    def showBroswerDialog(self):
+        self.broswerDialog = uic.loadUi(os.path.join(self.path, BROSWER_DIALOG))
+        self.broswerDialog.show()
+        self.broswerDialog.webView.load(QUrl("file:///C:/Users/jj/Desktop/pyqt_broswer/svg.html"))
+        self.broswerDialog.webView.show()
+        
