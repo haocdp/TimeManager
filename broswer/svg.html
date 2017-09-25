@@ -1,0 +1,714 @@
+<!DOCTYPE HTML>
+<html>
+
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+        <script src="./jquery-3.2.1.min.js"></script>
+
+        <style type="text/css">
+            body{
+                background-color:#1B1B1B;
+                margin:auto;
+                text-align: center;
+            }
+
+            #container{
+                margin: 0 auto;
+                width:60%;
+                text-align: left;
+            }
+            polygon{
+                stroke:rgba(100,149,237,1)
+            }
+
+            .timeSlider{
+                /* position: absolute; */
+                margin: 10px;
+            }
+
+            #fileSelector{
+                position: relative;
+                color:white;
+                left: 10px;
+                top: 10px;
+            }
+
+            #main{  
+                position: relative;
+                margin: 0 auto;
+                top: 60px;
+            }
+        
+        </style>
+    </head>
+
+    <body>
+        <br/>
+        <div id="container">
+            <!-- 时间滑动条，滑动时带动路径的改变 -->
+            <div class="timeSlider"> 
+                <!-- <label for="fader" style="color:chartreuse">小时</label> -->
+                <label for="fader" style="color:white">小时： </label>
+                <input type="range" style = "color:white;width:50%;height:10px" min="1" max="24" value="1" id="fader" step="1" 
+                    onchange="changePath(value)"
+                    oninput="outputUpdate(value)"/>
+                <output for="fader" style="color:white" id="hour">1</output>
+                <!-- <button></button> -->
+            </div>
+
+            <!-- <div id="fileSelector">
+                <label>选择区域json文件：</label>
+                <input id="tazfile" type="file" value="选择文件" onchange="setTazFileURL(this)">
+                <br/><br/>
+                <label>选择连线json文件：</label>
+                <input id="linefile" type="file" value="选择文件" onchange="setLineFileURL(this)">
+            </div> -->
+
+            <div id="main">
+                <svg class="svg" xmlns="http://www.w3.org/2000/svg"
+                    width="1100" height="600">
+
+                    <!-- <defs>
+                        <filter id="blurFilter" y="-10" height="40" x="-10" width="150">
+                            <feOffset in="SourceAlpha" dx="3" dy="3" result="offset3" />
+                            <feGaussianBlur in="offset3" stdDeviation="3"  result="blur3"/>
+                            <feBlend  in="SourceGraphic" in2="blur3" x="-10" width="160"/>
+                        
+                        </filter>
+                    </defs> -->
+
+                
+                    <!-- <path id="motionPath" class="path1"fill="none" stroke="#ffa022" stroke-width="2" stroke-miterlimit="0"
+                        
+                        d="M116 269 Q600,350 800 500"
+                        stroke-dasharray=""
+                        stroke-dashoffset="0.00"
+                        
+                        /> -->
+                    
+                    
+
+            
+                    <!-- <circle id="circle1" r="2" cx="0" cy="0" 
+                        stroke="none" fill= "#ffffff"; fill-opacity= "1"/>
+                    <animateMotion
+                        xlink:href="#circle1"
+                        dur="4s"
+                        begin="0s"
+                        calcMode="paced"
+                        repeatCount="indefinite"
+                        fill="freeze">
+                        <mpath xlink:href="#motionPath" />
+                    </animateMotion>    -->
+                    
+                </svg>
+            </div>
+        </div>
+    
+    </body>
+    <script type="text/javascript">
+        var minLongitude = 180; //最左上角的经度
+        var maxLatitude = 0; //最左上角的维度
+
+        var points=""; //区域的点集表示
+        var taz_id; //区域taz_id
+        var taz; //区域
+        var od_line; //od连接线
+
+
+        var prePolygon; //记录前一个点击的区域
+        var target; //点击目标
+
+        var timer = null; //时间计时
+
+        var transform_multiple = 1200;
+
+        var tazFilePath = "./taz.geojson";
+        var lineFilePath = "./od_line.geojson";
+
+        // 将geo坐标转换为屏幕坐标
+        function transCoordinate(longitude, latitude) {
+            var trans_longitude = (longitude - minLongitude) * transform_multiple;
+            var trans_latitude = (maxLatitude - latitude) * transform_multiple;
+            return trans_longitude + "," + trans_latitude;
+        }
+
+        // 遍历所有的坐标，找到最左上角的坐标
+        function getReferCoordinate() {
+            if (tazFilePath != "") {
+                // $.getJSON("./taz.geojson", function(data) {
+                $.getJSON(tazFilePath, function(data) {
+                    taz = data;
+                    $.each(data.features, function(i, item) {
+                        $.each(item.geometry.coordinates[0], function(c_i, coordinate) {
+                            if (coordinate[0] < minLongitude)
+                                minLongitude = coordinate[0];
+                            if (coordinate[1] > maxLatitude)
+                                maxLatitude = coordinate[1]
+                        });
+                    });
+                });
+            }
+        }
+
+        /**
+         * 使用该方法绘画taz，其中加入点击响应事件
+         * 
+         **/
+        function drawPolygon(points, taz_id) {
+            var polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute("points", points);
+            polygon.setAttribute("taz_id", taz_id);
+            polygon.setAttribute("stroke", "#87cefa");
+            polygon.setAttribute("fill", "#1b1b1b");
+            polygon.setAttribute("stroke-width", "0.2");
+            polygon.addEventListener("click", changeColor, false);
+            $('.svg').append(polygon);
+        }
+
+        // 根据点击区域画线
+        function drawPath(d, id, cls) {
+            var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute("id",id);
+            path.setAttribute("class",cls);
+            path.setAttribute("d", d);
+            path.setAttribute("fill","none");
+            path.setAttribute("stroke", "#ffa022");
+            path.setAttribute("stroke-width", "1");
+            path.setAttribute("stroke-miterlimit","0");
+            path.setAttribute("stroke-dasharray", "");
+            path.setAttribute("stroke-dashoffset", "0.00");
+            $('.svg').append(path);
+        }
+
+        function drawMotionPoint(path_id) {
+            for (var i = 0; i < 15; i++) {
+                var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                var circle_id = path_id + "_circle" + i;
+                circle.setAttribute("id", circle_id);
+                circle.setAttribute("r", "0.7");
+                circle.setAttribute("cx", "0");
+                circle.setAttribute("cy", "0");
+                circle.setAttribute("stroke", "none");
+                circle.setAttribute("fill", "#ffffff");
+                circle.setAttribute("fill-opacity", "" + (1 - 0.07 * i));
+                
+                $('.svg').append(circle);
+
+                var animateMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+                animateMotion.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + circle_id);
+                animateMotion.setAttribute("dur", "4s");
+                animateMotion.setAttribute("begin", "" + 0.02 * i + "s");   
+                animateMotion.setAttribute("calcMode", "paced");
+                animateMotion.setAttribute("repeatCount", "indefinite");
+                animateMotion.setAttribute("fill", "freeze");
+
+                var mpath = document.createElementNS("http://www.w3.org/2000/svg", 'mpath');
+                mpath.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + path_id);
+
+                animateMotion.append(mpath);
+                
+                $('.svg').append(animateMotion);
+            }
+            
+        }
+        
+        // 删除所有的path
+        function removeAllPath() {
+            $('path').remove();
+        }
+
+        function removeAllPoint() {
+            $('circle').remove();
+            $('animateMotion').remove();
+        }
+
+        // taz点击事件，改变填充颜色并且绘画od线
+        function changeColor(evt) {
+            target = evt.target;
+            target.setAttribute("fill", "#ff2d2d");
+            if (prePolygon != null) {
+                prePolygon.setAttribute("fill", "#1b1b1b");
+            }
+            prePolygon = target;
+
+            $('#fader')[0].value = 1;
+            $('#hour')[0].value = 1;
+            removeAllPath();
+            removeAllPoint();
+            var hour = 1;
+            changePath(hour);
+
+            if (timer != null) {
+                window.clearInterval(timer);
+            }
+
+            // 每2秒进行一次跳动
+            timer = window.setInterval(function(){
+                if ($('#hour')[0].value == 24) {
+                    $('#fader')[0].value = 1;
+                    $('#hour')[0].value = 1;
+                    removeAllPath();
+                    removeAllPoint();
+                } else {
+                    $('#fader')[0].value = parseInt($('#hour')[0].value) + 1;
+                    $('#hour')[0].value = parseInt($('#hour')[0].value) + 1;
+                }
+                changePath($('#hour')[0].value);
+            }, 2000);
+        }
+
+        // 页面加载后调用，显示所有的动态走向
+        function showAllPath() {
+            $('#fader')[0].value = 1;
+            $('#hour')[0].value = 1;
+            removeAllPath();
+            removeAllPoint();
+            var hour = 1;
+            changeAllPath(hour);
+
+            if (timer != null) {
+                window.clearInterval(timer);
+            }
+
+            // 每2秒进行一次跳动
+            //timer = window.setInterval(function(){
+                if ($('#hour')[0].value == 24) {
+                    $('#fader')[0].value = 1;
+                    $('#hour')[0].value = 1;
+                    removeAllPath();
+                    removeAllPoint();
+                } else {
+                    $('#fader')[0].value = parseInt($('#hour')[0].value) + 1;
+                    $('#hour')[0].value = parseInt($('#hour')[0].value) + 1;
+                }
+                changeAllPath($('#hour')[0].value);
+            //}, 4000);
+        }
+
+        function changeAllPath(hour) {
+            if (od_line == null) {
+                if (lineFilePath != ""){
+                    // $.getJSON("./od_line.geojson", function(data){
+                    $.getJSON(lineFilePath, function(data){
+                        od_line = data;
+                        //alert(od_line);
+                    });
+                } else {
+                    alert("未加载直线文件");
+                }
+            }
+
+            var cls = "path" + hour;
+
+            //removeAllPath();
+            $.each(od_line.features, function(line_i, item){
+                var flag = false;
+                switch (parseInt(hour)){
+                    case 1:
+                        if (item.properties.h1 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 2:
+                        if (item.properties.h2 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 3:
+                        if (item.properties.h3 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 4:
+                        if (item.properties.h4 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 5:
+                        if (item.properties.h5 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 6:
+                        if (item.properties.h6 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 7:
+                        if (item.properties.h7 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 8:
+                        if (item.properties.h8 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 9:
+                        if (item.properties.h9 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 10:
+                        if (item.properties.h10 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 11:
+                        if (item.properties.h11 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 12:
+                        if (item.properties.h12 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 13:
+                        if (item.properties.h13 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 14:
+                        if (item.properties.h14 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 15:
+                        if (item.properties.h15 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 16:
+                        if (item.properties.h16 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 17:
+                        if (item.properties.h17 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 18:
+                        if (item.properties.h18 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 19:
+                        if (item.properties.h19 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 20:
+                        if (item.properties.h20 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 21:
+                        if (item.properties.h21 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 22:
+                        if (item.properties.h22 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 23:
+                        if (item.properties.h23 != 0) {
+                            flag = true;
+                        }
+                        break;
+                    case 24:
+                        if (item.properties.h24 != 0) {
+                            flag = true;
+                        }
+                        break;
+                }
+
+                if (flag){
+                    var id = "motionPath" + item.properties.destinatio + "_" + item.properties.origin;
+                    var d = "M" + (item.properties.start_lon - minLongitude) * transform_multiple + " " +
+                    (maxLatitude - item.properties.start_lat) * transform_multiple + " " +
+                    "L" + (item.properties.end_lon - minLongitude) * transform_multiple + " "+
+                    (maxLatitude - item.properties.end_lat) * transform_multiple;
+
+                    if ($('#'+ id).length == 0) {
+                        drawPath(d, id, cls);
+                        drawMotionPoint(id);
+                    }
+                }
+                
+            });
+            animatePath(cls);
+        }
+
+        // 根据时间的变化改变连线
+        function changePath(hour){
+            if (target == null) {
+                return;
+            }
+
+            if (od_line == null) {
+                if (lineFilePath != ""){
+                    // $.getJSON("./od_line.geojson", function(data){
+                    $.getJSON(lineFilePath, function(data){
+                        od_line = data;
+                        //alert(od_line);
+                    });
+                } else {
+                    alert("未加载直线文件");
+                }
+            }
+            
+            var cls = "path" + hour;
+
+            //removeAllPath();
+            $.each(od_line.features, function(line_i, item){
+                //console.log(item.properties.destinatio);
+                //console.log(target.attributes.getNamedItem("taz_id").value);
+                var flag = false;
+                if (item.properties.destinatio == target.attributes.getNamedItem("taz_id").value){
+                    switch (parseInt(hour)){
+                        case 1:
+                            if (item.properties.h1 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 2:
+                            if (item.properties.h2 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 3:
+                            if (item.properties.h3 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 4:
+                            if (item.properties.h4 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 5:
+                            if (item.properties.h5 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 6:
+                            if (item.properties.h6 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 7:
+                            if (item.properties.h7 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 8:
+                            if (item.properties.h8 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 9:
+                            if (item.properties.h9 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 10:
+                            if (item.properties.h10 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 11:
+                            if (item.properties.h11 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 12:
+                            if (item.properties.h12 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 13:
+                            if (item.properties.h13 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 14:
+                            if (item.properties.h14 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 15:
+                            if (item.properties.h15 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 16:
+                            if (item.properties.h16 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 17:
+                            if (item.properties.h17 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 18:
+                            if (item.properties.h18 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 19:
+                            if (item.properties.h19 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 20:
+                            if (item.properties.h20 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 21:
+                            if (item.properties.h21 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 22:
+                            if (item.properties.h22 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 23:
+                            if (item.properties.h23 != 0) {
+                                flag = true;
+                            }
+                            break;
+                        case 24:
+                            if (item.properties.h24 != 0) {
+                                flag = true;
+                            }
+                            break;
+                    }
+
+                    if (flag){
+                        var id = "motionPath" + item.properties.destinatio + "_" + item.properties.origin;
+                        var d = "M" + (item.properties.start_lon - minLongitude) * transform_multiple + " " +
+                        (maxLatitude - item.properties.start_lat) * transform_multiple + " " +
+                        "L" + (item.properties.end_lon - minLongitude) * transform_multiple + " "+
+                        (maxLatitude - item.properties.end_lat) * transform_multiple;
+
+                        if ($('#'+ id).length == 0) {
+                            drawPath(d, id, cls);
+                            drawMotionPoint(id);
+                        }
+                    }
+                }
+            });
+            animatePath(cls);
+        }
+
+        // 遍历所有feature，将多边形绘画在画布上
+        function parseGeoJson() {
+            if (tazFilePath != ""){
+                // $.getJSON("./taz.geojson", function(data) {
+                $.getJSON(tazFilePath, function(data) {
+                    $.each(data.features, function(i, item) {
+                        points = ""
+                        $.each(item.geometry.coordinates[0], function(c_i, coordinate) {
+                            if(c_i != 0) {
+                                points = points + " " + transCoordinate(coordinate[0], coordinate[1]);
+                            } else {
+                                points = transCoordinate(coordinate[0], coordinate[1]);
+                            }
+                        });
+                        taz_id = item.properties.TAZ_ID;
+                        drawPolygon(points, taz_id);
+                    });
+                });
+            }
+        }
+
+        $().ready(function(){
+            $.getJSON(lineFilePath, function(data){
+                        od_line = data;
+                        //alert(od_line);
+            });
+
+            getReferCoordinate();
+            parseGeoJson();
+            // animatePath("path1");
+            //drawMotionPoint("motionPath");
+            setTimeout(showAllPath, 2000);
+        });
+
+        
+        
+        // 使连线有动画效果
+        function animatePath(cls) {
+            if (cls == null || cls == ""){
+                cls = "path1"
+            }
+
+            // var path = document.querySelector('path');
+            var paths = $("." + cls);
+            $.each(paths, function(i, path){
+                var length = path.getTotalLength();
+                // 清除之前的动作
+                path.style.transition = path.style.WebkitTransition = 'none';
+                // 设置起始点
+                path.style.strokeDasharray = length + ' ' + length;
+                path.style.strokeDashoffset = length;
+                // 获取一个区域，获取相关的样式，让浏览器寻找一个起始点。
+                path.getBoundingClientRect();
+                // 定义动作
+                path.style.transition = path.style.WebkitTransition ='stroke-dashoffset 2s ease-in-out';
+                // Go!
+                path.style.strokeDashoffset = '0';
+            });
+            
+        }
+
+
+        function outputUpdate(hour) {
+            $('#hour')[0].value = hour;
+            // document.querySelector("#hour").value = hour;
+        }
+
+
+        // 获取url中参数的值
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) {
+                return unescape(r[2]);
+            }
+            return null;
+        }
+
+        function setTazFileURL(obj) {
+            tazFilePath = document.getElementById('tazfile').value;
+            // alert(fileURL);
+            getReferCoordinate();
+            parseGeoJson();
+        }
+
+        function setLineFileURL(obj) {
+            lineFilePath = document.getElementById('linefile').value;
+            // alert(fileURL);
+
+            if (lineFilePath != ""){
+                // $.getJSON("./od_line.geojson", function(data){
+                $.getJSON(lineFilePath, function(data){
+                    od_line = data;
+                    //alert(od_line);
+                });
+            }
+        }
+        
+    </script>
+</html>

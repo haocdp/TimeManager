@@ -108,50 +108,49 @@ class TimeLayerManager(QObject):
         
     
 
-    @log_exceptions
-    def refreshTimeRestrictions(self):
-        """Refresh the subset strings of all enabled layers"""
-        if not self.hasLayers():
-            return
-        if self.isEnabled():
-            for timeLayer in self.getTimeLayerList():
-                timeLayer.setTimeRestriction(self.getCurrentTimePosition(), self.timeFrame())
-        else:
-            for timeLayer in self.getTimeLayerList():
-                if not timeLayer.hasTimeRestriction():
-                    continue
-                timeLayer.deleteTimeRestriction()
- 
-        self.timeRestrictionsRefreshed.emit(self.getCurrentTimePosition())
-    
-#     def timeFrameAccumulator(self, startTime, currentTime):
-#             
-#             totalSeconds = (currentTime - startTime).total_seconds()
-#             
-#             return timedelta(seconds=(
-#                 (currentTime - startTime).total_seconds() + self.timeFrameSize
-#                 ))
-            
 #     @log_exceptions
 #     def refreshTimeRestrictions(self):
-#         
-#         startTime = datetime.strptime("1900-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-#         
 #         """Refresh the subset strings of all enabled layers"""
 #         if not self.hasLayers():
 #             return
 #         if self.isEnabled():
 #             for timeLayer in self.getTimeLayerList():
-#                 totalSeconds = self.timeFrameAccumulator(startTime, self.getCurrentTimePosition())
-#                 # timeLayer.setTimeRestriction(self.getCurrentTimePosition(), self.timeFrame())
-#                 timeLayer.setTimeRestriction(startTime, totalSeconds)
+#                 timeLayer.setTimeRestriction(self.getCurrentTimePosition(), self.timeFrame())
 #         else:
 #             for timeLayer in self.getTimeLayerList():
 #                 if not timeLayer.hasTimeRestriction():
 #                     continue
 #                 timeLayer.deleteTimeRestriction()
-# 
+#  
 #         self.timeRestrictionsRefreshed.emit(self.getCurrentTimePosition())
+    def timeFrameAccumulator(self, startTime, currentTime):
+             
+        totalSeconds = (currentTime - startTime).total_seconds()
+#             
+        return timedelta(seconds=(
+            (currentTime - startTime).total_seconds() + self.timeFrameSize
+                 ))
+               
+    @log_exceptions
+    def refreshTimeRestrictions(self):
+         
+         startTime = datetime.strptime("1900-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+         
+         """Refresh the subset strings of all enabled layers"""
+         if not self.hasLayers():
+             return
+         if self.isEnabled():
+             for timeLayer in self.getTimeLayerList():
+                 totalSeconds = self.timeFrameAccumulator(startTime, self.getCurrentTimePosition())
+                 # timeLayer.setTimeRestriction(self.getCurrentTimePosition(), self.timeFrame())
+                 timeLayer.setTimeRestriction(startTime, totalSeconds)
+         else:
+             for timeLayer in self.getTimeLayerList():
+                 if not timeLayer.hasTimeRestriction():
+                     continue
+                 timeLayer.deleteTimeRestriction()
+ 
+         self.timeRestrictionsRefreshed.emit(self.getCurrentTimePosition())
 
     @log_exceptions
     def registerTimeLayer(self, timeLayer):

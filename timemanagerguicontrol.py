@@ -50,6 +50,11 @@ BROSWER_DIALOG = "webView.ui"
 
 # TAZ分隔区间数组
 TAZ_INTENSITY_THRESHOLD = [0, 80.0, 160.0, 240.0, 320.0, 400.0, 480.0, 560.0]
+TAZ_INTENSITY_COLOR_O = ['#ffffff','#c6dbef','#9ecae1','#6baed6','#4292c6','#2171b5','#08519c']
+TAZ_INTENSITY_COLOR_D = ['#ffffff','#c7e9c0','#a1d99b','#74c476','#41ab5d','#238b45','#006d2c']
+LINE_INTENSITY_THRESHOLD = [0, 10.0, 20.0, 30.0, 40.0, 100.0]
+#LINE_INTENSITY_COLOR = ['#deebf7','#9ecae1','#4292c6','#2171b5','#08519c']
+LINE_INTENSITY_COLOR = ['#fef0d9','#fdcc8a','#fc8d59','#e34a33','#b30000']
 
 class TimestampLabelConfig(object):
     """Object that has the settings for rendering timestamp labels. Can be customized via the UI"""
@@ -652,9 +657,27 @@ class TimeManagerGuiControl(QObject):
                     QMessageBox.information(self.iface.mainWindow(), 'Info',
                                     u'图层不是直线图层')
                 else :
+                    self.filterFeature()
                     self.setTimeSlider()
         else:
+            self.filterFeature()
             self.setTimeSlider()
+    
+    # 对feature进行过滤
+    def filterFeature(self):
+        sum = 0
+        featureIds = []
+        if not self.layer is None:
+            features = self.layer.getFeatures()
+            for feature in features:
+                sum = 0
+                for i in range(1, 25):
+                    sum = sum + feature['h' + str(i)]
+                            
+                if sum == 0:
+                    featureIds.append(feature.id())
+                            
+            self.layer.dataProvider().deleteFeatures(featureIds)
     
     # 设置时间序列为24个小时按每小时刷新
     def setTimeSlider(self):
@@ -724,65 +747,70 @@ class TimeManagerGuiControl(QObject):
         # 渲染样式
         myRangeList = []
         
-        # symbol 1
-        myMin = 0.0
-        myMax = 2000.0
-        myLabel = '0.0 - 2000.0'
-        myColour = QtGui.QColor('#fff5eb')
-        mySymbol1 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
-        mySymbol1.setColor(myColour)
-        mySymbol1.setAlpha(0)
-        mySymbol1.setWidth(0)
-        myRange1 = QgsRendererRangeV2(myMin, myMax, mySymbol1, myLabel)
-        myRangeList.append(myRange1)
-        
-        # symbol 2
-        myMin = 2000.0
-        myMax = 4000.0
-        myLabel = '2000.0 - 4000.0'
-        myColour = QtGui.QColor('#fdd1a5')
-        mySymbol2 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
-        mySymbol2.setColor(myColour)
-        mySymbol2.setAlpha(0.2)
-        mySymbol2.setWidth(0.5)
-        myRange2 = QgsRendererRangeV2(myMin, myMax, mySymbol2, myLabel)
-        myRangeList.append(myRange2)
-        
-        # symbol 3
-        myMin = 4000.0
-        myMax = 6000.0
-        myLabel = '4000.0 - 6000.0'
-        myColour = QtGui.QColor('#fd9243')
-        mySymbol3 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
-        mySymbol3.setColor(myColour)
-        mySymbol3.setAlpha(0.4)
-        mySymbol3.setWidth(0.8)
-        myRange3 = QgsRendererRangeV2(myMin, myMax, mySymbol3, myLabel)
-        myRangeList.append(myRange3)
-        
-        # symbol 4
-        myMin = 6000.0
-        myMax = 8000.0
-        myLabel = '6000.0 - 8000.0'
-        myColour = QtGui.QColor('#de4f05')
-        mySymbol4 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
-        mySymbol4.setColor(myColour)
-        mySymbol4.setAlpha(0.6)
-        mySymbol4.setWidth(1)
-        myRange4 = QgsRendererRangeV2(myMin, myMax, mySymbol4, myLabel)
-        myRangeList.append(myRange4)
-        
         # symbol 5
-        myMin = 8000.0
-        myMax = 10000.0
-        myLabel = '8000.0 - 10000.0'
-        myColour = QtGui.QColor('#7f2704')
+        myMin = LINE_INTENSITY_THRESHOLD[4]
+        myMax = LINE_INTENSITY_THRESHOLD[5]
+        myLabel = str(LINE_INTENSITY_THRESHOLD[4]) + ' - ' + str(LINE_INTENSITY_THRESHOLD[5])
+        # myColour = QtGui.QColor('#7f2704')
+        myColour = QtGui.QColor(LINE_INTENSITY_COLOR[4])
         mySymbol5 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
         mySymbol5.setColor(myColour)
         mySymbol5.setAlpha(1)
         mySymbol5.setWidth(1.3)
         myRange5 = QgsRendererRangeV2(myMin, myMax, mySymbol5, myLabel)
         myRangeList.append(myRange5)
+        
+        # symbol 4
+        myMin = LINE_INTENSITY_THRESHOLD[3]
+        myMax = LINE_INTENSITY_THRESHOLD[4]
+        myLabel = str(LINE_INTENSITY_THRESHOLD[3]) + ' - ' + str(LINE_INTENSITY_THRESHOLD[4])
+        # myColour = QtGui.QColor('#de4f05')
+        myColour = QtGui.QColor(LINE_INTENSITY_COLOR[3])
+        mySymbol4 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol4.setColor(myColour)
+        mySymbol4.setAlpha(1)
+        mySymbol4.setWidth(1)
+        myRange4 = QgsRendererRangeV2(myMin, myMax, mySymbol4, myLabel)
+        myRangeList.append(myRange4)
+        
+        # symbol 3
+        myMin = LINE_INTENSITY_THRESHOLD[2]
+        myMax = LINE_INTENSITY_THRESHOLD[3]
+        myLabel = str(LINE_INTENSITY_THRESHOLD[2]) + ' - ' + str(LINE_INTENSITY_THRESHOLD[3])
+        # myColour = QtGui.QColor('#fd9243')
+        myColour = QtGui.QColor(LINE_INTENSITY_COLOR[2])
+        mySymbol3 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol3.setColor(myColour)
+        mySymbol3.setAlpha(1)
+        mySymbol3.setWidth(0.8)
+        myRange3 = QgsRendererRangeV2(myMin, myMax, mySymbol3, myLabel)
+        myRangeList.append(myRange3)
+        
+        # symbol 2
+        myMin = LINE_INTENSITY_THRESHOLD[1]
+        myMax = LINE_INTENSITY_THRESHOLD[2]
+        myLabel = str(LINE_INTENSITY_THRESHOLD[1]) + ' - ' + str(LINE_INTENSITY_THRESHOLD[2])
+        # myColour = QtGui.QColor('#fdd1a5')
+        myColour = QtGui.QColor(LINE_INTENSITY_COLOR[1])
+        mySymbol2 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol2.setColor(myColour)
+        mySymbol2.setAlpha(1)
+        mySymbol2.setWidth(0.5)
+        myRange2 = QgsRendererRangeV2(myMin, myMax, mySymbol2, myLabel)
+        myRangeList.append(myRange2)
+        
+        # symbol 1
+        myMin = LINE_INTENSITY_THRESHOLD[0]
+        myMax = LINE_INTENSITY_THRESHOLD[1]
+        myLabel = str(LINE_INTENSITY_THRESHOLD[0]) + ' - ' + str(LINE_INTENSITY_THRESHOLD[1])
+        # myColour = QtGui.QColor('#fff5eb')
+        myColour = QtGui.QColor(LINE_INTENSITY_COLOR[0])
+        mySymbol1 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol1.setColor(myColour)
+        mySymbol1.setAlpha(1)
+        mySymbol1.setWidth(0)
+        myRange1 = QgsRendererRangeV2(myMin, myMax, mySymbol1, myLabel)
+        myRangeList.append(myRange1)
         
         self.myRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
         self.myRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
@@ -793,7 +821,7 @@ class TimeManagerGuiControl(QObject):
             value = self.dock.horizontalTimeSlider.value() 
             
         if value <= 24:
-            self.myRenderer.setClassAttribute(str(value))
+            self.myRenderer.setClassAttribute('h' + str(value))
             self.layer.setRendererV2(self.myRenderer)
             
             # renderer = self.layer.rendererV2()
@@ -1005,10 +1033,11 @@ class TimeManagerGuiControl(QObject):
         myLabel = str(TAZ_INTENSITY_THRESHOLD[0]) + ' - ' + str(TAZ_INTENSITY_THRESHOLD[1])
         if self.dock.radioButton_origin.isChecked():
             #myColour = QtGui.QColor('#deebf7')
-            myColour = QtGui.QColor('#ffffff')
+            myColour = QtGui.QColor('#1b1b1b')
         else:
-            myColour = QtGui.QColor('#ffffff')
-        mySymbol1 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+            myColour = QtGui.QColor('#1b1b1b')
+        # mySymbol1 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol1 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol1.setColor(myColour)
         mySymbol1.setAlpha(1)
         # mySymbol1.setWidth(0)
@@ -1023,7 +1052,7 @@ class TimeManagerGuiControl(QObject):
             myColour = QtGui.QColor('#c6dbef')
         else:
             myColour = QtGui.QColor('#c7e9c0')
-        mySymbol2 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol2 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol2.setColor(myColour)
         mySymbol2.setAlpha(1)
         # mySymbol2.setWidth(0.5)
@@ -1038,7 +1067,7 @@ class TimeManagerGuiControl(QObject):
             myColour = QtGui.QColor('#9ecae1')
         else:
             myColour = QtGui.QColor('#a1d99b')
-        mySymbol3 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol3 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol3.setColor(myColour)
         mySymbol3.setAlpha(1)
         # mySymbol3.setWidth(0.8)
@@ -1053,7 +1082,7 @@ class TimeManagerGuiControl(QObject):
             myColour = QtGui.QColor('#6baed6')
         else:
             myColour = QtGui.QColor('#74c476')
-        mySymbol4 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol4 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol4.setColor(myColour)
         mySymbol4.setAlpha(1)
         # mySymbol4.setWidth(1)
@@ -1068,7 +1097,7 @@ class TimeManagerGuiControl(QObject):
             myColour = QtGui.QColor('#4292c6')
         else:
             myColour = QtGui.QColor('#41ab5d')
-        mySymbol5 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol5 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol5.setColor(myColour)
         mySymbol5.setAlpha(1)
         # mySymbol5.setWidth(1.3)
@@ -1083,7 +1112,7 @@ class TimeManagerGuiControl(QObject):
             myColour = QtGui.QColor('#2171b5')
         else:
             myColour = QtGui.QColor('#238b45')
-        mySymbol6 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol6 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol6.setColor(myColour)
         mySymbol6.setAlpha(1)
         # mySymbol5.setWidth(1.3)
@@ -1098,15 +1127,19 @@ class TimeManagerGuiControl(QObject):
             myColour = QtGui.QColor('#08519c')
         else:
             myColour = QtGui.QColor('#006d2c')
-        mySymbol7 = QgsSymbolV2.defaultSymbol(self.regionLayer.geometryType())
+        mySymbol7 = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
         mySymbol7.setColor(myColour)
         mySymbol7.setAlpha(1)
         # mySymbol7.setWidth(1.3)
         myRange7 = QgsRendererRangeV2(myMin, myMax, mySymbol7, myLabel)
         myRangeList.append(myRange7)
         
+        
+        defaultSymbol = QgsFillSymbolV2.createSimple({'outline_width':u'0.1', 'outline_color':u'35,212,231,255', 'color':u'27,27,27,255'})
+        
         self.myPolygonRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
         self.myPolygonRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
+        self.myPolygonRenderer.setSourceSymbol(defaultSymbol)
         
     def initPolygonTimeSlider(self):
         min = 1
@@ -1153,7 +1186,11 @@ class TimeManagerGuiControl(QObject):
     
     def showBroswerDialog(self):
         self.broswerDialog = uic.loadUi(os.path.join(self.path, BROSWER_DIALOG))
-        self.broswerDialog.show()
-        self.broswerDialog.webView.load(QUrl("file:///C:/Users/jj/Desktop/pyqt_broswer/svg.html"))
-        self.broswerDialog.webView.show()
+        
+#         self.broswerDialog.show()
+#         self.broswerDialog.webView.load(QUrl("file:///C:/Users/jj/Desktop/pyqt_broswer/svg.html"))
+#         self.broswerDialog.webView.show()
+        url = QUrl("C:/Users/jj/.qgis2/python/plugins/timemanager/broswer/svg.html");
+        #url.addQueryItem("abc", "123");
+        QDesktopServices.openUrl(url);
         
