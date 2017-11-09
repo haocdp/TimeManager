@@ -312,6 +312,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="pushButtonSetTrajectorySlider">
+        <property name="text">
+         <string>设置轨迹时序</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButtonBroswerDialog">
         <property name="text">
          <string>浏览窗口</string>

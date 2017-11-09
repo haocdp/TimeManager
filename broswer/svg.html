@@ -16,16 +16,19 @@
 
             #container{
                 margin: 0 auto;
-                width:60%;
-                text-align: left;
+                
+                /* width:90%;
+                text-align: left; */
             }
             polygon{
-                stroke:rgba(100,149,237,1)
+                stroke:rgba(35,212,231,255)
             }
 
             .timeSlider{
                 /* position: absolute; */
-                margin: 10px;
+                /* border-top: 1px solid white;
+                padding: 5px; */
+                margin: 10px;   
             }
 
             #fileSelector{
@@ -39,6 +42,11 @@
                 position: relative;
                 margin: 0 auto;
                 top: 60px;
+            }
+
+            #svg{
+                width:1100px;
+                height:600px;
             }
         
         </style>
@@ -117,13 +125,15 @@
         var taz; //区域
         var od_line; //od连接线
 
+        var od_intensity_threshold = 3;
 
         var prePolygon; //记录前一个点击的区域
         var target; //点击目标
 
         var timer = null; //时间计时
 
-        var transform_multiple = 1200;
+        //var transform_multiple = 1200;
+        var transform_multiple = window.screen.width * 0.85;
 
         var tazFilePath = "./taz.geojson";
         var lineFilePath = "./od_line.geojson";
@@ -184,11 +194,11 @@
         }
 
         function drawMotionPoint(path_id) {
-            for (var i = 0; i < 15; i++) {
+            for (var i = 0; i < 1; i++) {
                 var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 var circle_id = path_id + "_circle" + i;
                 circle.setAttribute("id", circle_id);
-                circle.setAttribute("r", "0.7");
+                circle.setAttribute("r", "1");
                 circle.setAttribute("cx", "0");
                 circle.setAttribute("cy", "0");
                 circle.setAttribute("stroke", "none");
@@ -274,7 +284,7 @@
             }
 
             // 每2秒进行一次跳动
-            //timer = window.setInterval(function(){
+            timer = window.setInterval(function(){
                 if ($('#hour')[0].value == 24) {
                     $('#fader')[0].value = 1;
                     $('#hour')[0].value = 1;
@@ -285,7 +295,7 @@
                     $('#hour')[0].value = parseInt($('#hour')[0].value) + 1;
                 }
                 changeAllPath($('#hour')[0].value);
-            //}, 4000);
+            }, 4000);
         }
 
         function changeAllPath(hour) {
@@ -308,138 +318,150 @@
                 var flag = false;
                 switch (parseInt(hour)){
                     case 1:
-                        if (item.properties.h1 != 0) {
+                        if (item.properties.h1 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 2:
-                        if (item.properties.h2 != 0) {
+                        if (item.properties.h2 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 3:
-                        if (item.properties.h3 != 0) {
+                        if (item.properties.h3 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 4:
-                        if (item.properties.h4 != 0) {
+                        if (item.properties.h4 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 5:
-                        if (item.properties.h5 != 0) {
+                        if (item.properties.h5 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 6:
-                        if (item.properties.h6 != 0) {
+                        if (item.properties.h6 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 7:
-                        if (item.properties.h7 != 0) {
+                        if (item.properties.h7 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 8:
-                        if (item.properties.h8 != 0) {
+                        if (item.properties.h8 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 9:
-                        if (item.properties.h9 != 0) {
+                        if (item.properties.h9 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 10:
-                        if (item.properties.h10 != 0) {
+                        if (item.properties.h10 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 11:
-                        if (item.properties.h11 != 0) {
+                        if (item.properties.h11 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 12:
-                        if (item.properties.h12 != 0) {
+                        if (item.properties.h12 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 13:
-                        if (item.properties.h13 != 0) {
+                        if (item.properties.h13 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 14:
-                        if (item.properties.h14 != 0) {
+                        if (item.properties.h14 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 15:
-                        if (item.properties.h15 != 0) {
+                        if (item.properties.h15 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 16:
-                        if (item.properties.h16 != 0) {
+                        if (item.properties.h16 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 17:
-                        if (item.properties.h17 != 0) {
+                        if (item.properties.h17 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 18:
-                        if (item.properties.h18 != 0) {
+                        if (item.properties.h18 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 19:
-                        if (item.properties.h19 != 0) {
+                        if (item.properties.h19 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 20:
-                        if (item.properties.h20 != 0) {
+                        if (item.properties.h20 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 21:
-                        if (item.properties.h21 != 0) {
+                        if (item.properties.h21 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 22:
-                        if (item.properties.h22 != 0) {
+                        if (item.properties.h22 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 23:
-                        if (item.properties.h23 != 0) {
+                        if (item.properties.h23 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                     case 24:
-                        if (item.properties.h24 != 0) {
+                        if (item.properties.h24 > od_intensity_threshold) {
                             flag = true;
                         }
                         break;
                 }
 
                 if (flag){
-                    var id = "motionPath" + item.properties.destinatio + "_" + item.properties.origin;
-                    var d = "M" + (item.properties.start_lon - minLongitude) * transform_multiple + " " +
-                    (maxLatitude - item.properties.start_lat) * transform_multiple + " " +
-                    "L" + (item.properties.end_lon - minLongitude) * transform_multiple + " "+
-                    (maxLatitude - item.properties.end_lat) * transform_multiple;
+                    if (item.properties.destinatio != item.properties.origin) {
+                        var id = "motionPath" + item.properties.destinatio + "_" + item.properties.origin;
+                        var d = "M" + (item.properties.start_lon - minLongitude) * transform_multiple + " " +
+                        (maxLatitude - item.properties.start_lat) * transform_multiple + " " +
+                        "L" + (item.properties.end_lon - minLongitude) * transform_multiple + " "+
+                        (maxLatitude - item.properties.end_lat) * transform_multiple;
 
-                    if ($('#'+ id).length == 0) {
-                        drawPath(d, id, cls);
-                        drawMotionPoint(id);
+                        if ($('#'+ id).length == 0) {
+                            drawPath(d, id, cls);
+                            drawMotionPoint(id);
+                        }
                     }
+                    // var id = "motionPath" + item.properties.destinatio + "_" + item.properties.origin;
+                    // var d = "M" + (item.properties.start_lon - minLongitude) * transform_multiple + " " +
+                    // (maxLatitude - item.properties.start_lat) * transform_multiple + " " +
+                    // "L" + (item.properties.end_lon - minLongitude) * transform_multiple + " "+
+                    // (maxLatitude - item.properties.end_lat) * transform_multiple;
+
+                    // if ($('#'+ id).length == 0) {
+                    //     drawPath(d, id, cls);
+                    //     drawMotionPoint(id);
+                    // }
                 }
                 
             });
@@ -474,122 +496,122 @@
                 if (item.properties.destinatio == target.attributes.getNamedItem("taz_id").value){
                     switch (parseInt(hour)){
                         case 1:
-                            if (item.properties.h1 != 0) {
+                            if (item.properties.h1 > 0) {
                                 flag = true;
                             }
                             break;
                         case 2:
-                            if (item.properties.h2 != 0) {
+                            if (item.properties.h2 > 0) {
                                 flag = true;
                             }
                             break;
                         case 3:
-                            if (item.properties.h3 != 0) {
+                            if (item.properties.h3 > 0) {
                                 flag = true;
                             }
                             break;
                         case 4:
-                            if (item.properties.h4 != 0) {
+                            if (item.properties.h4 > 0) {
                                 flag = true;
                             }
                             break;
                         case 5:
-                            if (item.properties.h5 != 0) {
+                            if (item.properties.h5 > 0) {
                                 flag = true;
                             }
                             break;
                         case 6:
-                            if (item.properties.h6 != 0) {
+                            if (item.properties.h6 > 0) {
                                 flag = true;
                             }
                             break;
                         case 7:
-                            if (item.properties.h7 != 0) {
+                            if (item.properties.h7 > 0) {
                                 flag = true;
                             }
                             break;
                         case 8:
-                            if (item.properties.h8 != 0) {
+                            if (item.properties.h8 > 0) {
                                 flag = true;
                             }
                             break;
                         case 9:
-                            if (item.properties.h9 != 0) {
+                            if (item.properties.h9 > 0) {
                                 flag = true;
                             }
                             break;
                         case 10:
-                            if (item.properties.h10 != 0) {
+                            if (item.properties.h10 > 0) {
                                 flag = true;
                             }
                             break;
                         case 11:
-                            if (item.properties.h11 != 0) {
+                            if (item.properties.h11 > 0) {
                                 flag = true;
                             }
                             break;
                         case 12:
-                            if (item.properties.h12 != 0) {
+                            if (item.properties.h12 > 0) {
                                 flag = true;
                             }
                             break;
                         case 13:
-                            if (item.properties.h13 != 0) {
+                            if (item.properties.h13 > 0) {
                                 flag = true;
                             }
                             break;
                         case 14:
-                            if (item.properties.h14 != 0) {
+                            if (item.properties.h14 > 0) {
                                 flag = true;
                             }
                             break;
                         case 15:
-                            if (item.properties.h15 != 0) {
+                            if (item.properties.h15 > 0) {
                                 flag = true;
                             }
                             break;
                         case 16:
-                            if (item.properties.h16 != 0) {
+                            if (item.properties.h16 > 0) {
                                 flag = true;
                             }
                             break;
                         case 17:
-                            if (item.properties.h17 != 0) {
+                            if (item.properties.h17 > 0) {
                                 flag = true;
                             }
                             break;
                         case 18:
-                            if (item.properties.h18 != 0) {
+                            if (item.properties.h18 > 0) {
                                 flag = true;
                             }
                             break;
                         case 19:
-                            if (item.properties.h19 != 0) {
+                            if (item.properties.h19 > 0) {
                                 flag = true;
                             }
                             break;
                         case 20:
-                            if (item.properties.h20 != 0) {
+                            if (item.properties.h20 > 0) {
                                 flag = true;
                             }
                             break;
                         case 21:
-                            if (item.properties.h21 != 0) {
+                            if (item.properties.h21 > 0) {
                                 flag = true;
                             }
                             break;
                         case 22:
-                            if (item.properties.h22 != 0) {
+                            if (item.properties.h22 > 0) {
                                 flag = true;
                             }
                             break;
                         case 23:
-                            if (item.properties.h23 != 0) {
+                            if (item.properties.h23 > 0) {
                                 flag = true;
                             }
                             break;
                         case 24:
-                            if (item.properties.h24 != 0) {
+                            if (item.properties.h24 > 0) {
                                 flag = true;
                             }
                             break;
@@ -614,7 +636,7 @@
 
         // 遍历所有feature，将多边形绘画在画布上
         function parseGeoJson() {
-            if (tazFilePath != ""){
+            if (tazFilePath != ""){ 
                 // $.getJSON("./taz.geojson", function(data) {
                 $.getJSON(tazFilePath, function(data) {
                     $.each(data.features, function(i, item) {
@@ -634,6 +656,9 @@
         }
 
         $().ready(function(){
+            $('svg')[0].style.width = window.screen.width * 0.8 + "px";
+            $('svg')[0].style.height = window.screen.height * 0.7 + "px";
+
             $.getJSON(lineFilePath, function(data){
                         od_line = data;
                         //alert(od_line);
@@ -646,7 +671,33 @@
             setTimeout(showAllPath, 2000);
         });
 
-        
+        $(function(){
+            // if ($.browser.msie) {
+            //     $('svg')[0].bind("mousewheel", function(e){
+            //         var e=e||event,v=e.wheelDelta||e.detail;  
+            //         if(v>0)  
+            //             refreshMap(this,e.detail);  
+            //         else  
+            //             refreshMap(this,true);  
+            //         window.event.returnValue=false;  
+            //         return false;
+            //     });
+            // } else {
+                $('svg').bind("DOMMouseScroll",function(event){  
+                    console.log(event.detail);
+                    event.preventDefault();  
+                })
+            // }
+            
+        });
+
+        function refreshMap(node,detail){  
+            if(!isSmall){  
+                $(node).height($(node).height()*1.2);  
+            }else{  
+                $(node).height($(node).height()*0.8);  
+            }  
+        }
         
         // 使连线有动画效果
         function animatePath(cls) {

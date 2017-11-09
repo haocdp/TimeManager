@@ -47,14 +47,16 @@ ANIMATION_WIDGET_FILE = "animate.ui"
 SELECT_VECTOR_LAYER = "selectVectorLayer.ui"
 GENERATE_OD = "generateOd.ui"
 BROSWER_DIALOG = "webView.ui"
+SELECT_DIRECTORY_DIALOG = "select_directory.ui"
 
 # TAZ分隔区间数组
-TAZ_INTENSITY_THRESHOLD = [0, 80.0, 160.0, 240.0, 320.0, 400.0, 480.0, 560.0]
+TAZ_INTENSITY_THRESHOLD = [0, 20.0, 160.0, 240.0, 320.0, 400.0, 480.0, 560.0]
 TAZ_INTENSITY_COLOR_O = ['#ffffff','#c6dbef','#9ecae1','#6baed6','#4292c6','#2171b5','#08519c']
 TAZ_INTENSITY_COLOR_D = ['#ffffff','#c7e9c0','#a1d99b','#74c476','#41ab5d','#238b45','#006d2c']
-LINE_INTENSITY_THRESHOLD = [0, 10.0, 20.0, 30.0, 40.0, 100.0]
+LINE_INTENSITY_THRESHOLD = [0, 3, 20.0, 30.0, 40.0, 100.0]
 #LINE_INTENSITY_COLOR = ['#deebf7','#9ecae1','#4292c6','#2171b5','#08519c']
-LINE_INTENSITY_COLOR = ['#fef0d9','#fdcc8a','#fc8d59','#e34a33','#b30000']
+#LINE_INTENSITY_COLOR = ['#fef0d9','#fdcc8a','#fc8d59','#e34a33','#b30000']
+LINE_INTENSITY_COLOR = ['#ffff00','#ffb100','#ff6800','#ff3e12','#ff1320']
 
 class TimestampLabelConfig(object):
     """Object that has the settings for rendering timestamp labels. Can be customized via the UI"""
@@ -135,6 +137,7 @@ class TimeManagerGuiControl(QObject):
         # self.dock.pushButtonSetTimeSlider.clicked.connect(self.setTimeSlider)
         self.dock.pushButtonSetTimeSlider.clicked.connect(self.showSelectVectorLayer)
         self.dock.pushButtonSetPolygonTimeSlider.clicked.connect(self.showSelectRegionLayer)
+        self.dock.pushButtonSetTrajectorySlider.clicked.connect(self.showSelectDirectoryDialog)
         
         self.dock.radioButton_origin.hide()
         self.dock.radioButton_destination.hide()
@@ -754,6 +757,7 @@ class TimeManagerGuiControl(QObject):
         # myColour = QtGui.QColor('#7f2704')
         myColour = QtGui.QColor(LINE_INTENSITY_COLOR[4])
         mySymbol5 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol5.symbolLayer(0).setRenderingPass(5)
         mySymbol5.setColor(myColour)
         mySymbol5.setAlpha(1)
         mySymbol5.setWidth(1.3)
@@ -767,6 +771,7 @@ class TimeManagerGuiControl(QObject):
         # myColour = QtGui.QColor('#de4f05')
         myColour = QtGui.QColor(LINE_INTENSITY_COLOR[3])
         mySymbol4 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol4.symbolLayer(0).setRenderingPass(4)
         mySymbol4.setColor(myColour)
         mySymbol4.setAlpha(1)
         mySymbol4.setWidth(1)
@@ -780,6 +785,7 @@ class TimeManagerGuiControl(QObject):
         # myColour = QtGui.QColor('#fd9243')
         myColour = QtGui.QColor(LINE_INTENSITY_COLOR[2])
         mySymbol3 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol3.symbolLayer(0).setRenderingPass(3)
         mySymbol3.setColor(myColour)
         mySymbol3.setAlpha(1)
         mySymbol3.setWidth(0.8)
@@ -793,8 +799,9 @@ class TimeManagerGuiControl(QObject):
         # myColour = QtGui.QColor('#fdd1a5')
         myColour = QtGui.QColor(LINE_INTENSITY_COLOR[1])
         mySymbol2 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol2.symbolLayer(0).setRenderingPass(2)
         mySymbol2.setColor(myColour)
-        mySymbol2.setAlpha(1)
+        mySymbol2.setAlpha(0.5)
         mySymbol2.setWidth(0.5)
         myRange2 = QgsRendererRangeV2(myMin, myMax, mySymbol2, myLabel)
         myRangeList.append(myRange2)
@@ -806,8 +813,9 @@ class TimeManagerGuiControl(QObject):
         # myColour = QtGui.QColor('#fff5eb')
         myColour = QtGui.QColor(LINE_INTENSITY_COLOR[0])
         mySymbol1 = QgsSymbolV2.defaultSymbol(self.layer.geometryType())
+        mySymbol1.symbolLayer(0).setRenderingPass(1)
         mySymbol1.setColor(myColour)
-        mySymbol1.setAlpha(1)
+        mySymbol1.setAlpha(0.2)
         mySymbol1.setWidth(0)
         myRange1 = QgsRendererRangeV2(myMin, myMax, mySymbol1, myLabel)
         myRangeList.append(myRange1)
@@ -815,12 +823,24 @@ class TimeManagerGuiControl(QObject):
         self.myRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
         self.myRenderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
         
+        
+        
+        
+    # 设置图层渲染等级，失败，不起作用
+    def setDefaultLevels(self):
+        lineSymbols = self.layer.rendererV2().legendSymbolItemsV2();
+        for lineSymbol in lineSymbols:
+            sym = lineSymbol.symbol()
+            for i in range(sym.symbolLayerCount()):
+                sym.symbolLayer(i).setRenderingPass(5 - i)
+        
+        
     # 时序值改变时触发的方法：修改图层渲染属性
     def timeSliderChanged(self, value=None):
         if value == None:
             value = self.dock.horizontalTimeSlider.value() 
             
-        if value <= 24:
+        if value <= self.dock.horizontalTimeSlider.maximum():
             self.myRenderer.setClassAttribute('h' + str(value))
             self.layer.setRendererV2(self.myRenderer)
             
@@ -830,12 +850,14 @@ class TimeManagerGuiControl(QObject):
             
             if hasattr(self.layer, "setCacheImage"):
                 self.layer.setCacheImage(None)
-            
+                
             self.layer.triggerRepaint()
             self.iface.legendInterface().refreshLayerSymbology(self.layer)
         else:
             self.qTimer.stop()
-            self.dock.horizontalTimeSlider.setValue(1)
+            self.dock.horizontalTimeSlider.setValue(self.dock.horizontalTimeSlider.minimum())
+            
+        
         
     # 自动播放按钮
     def autoPlay(self):
@@ -850,9 +872,9 @@ class TimeManagerGuiControl(QObject):
         
     def incrementValue(self):
         value = self.dock.horizontalTimeSlider.value()
-        if value == 24:
+        if value == self.dock.horizontalTimeSlider.maximum():
             self.qTimer.stop()
-            self.dock.horizontalTimeSlider.setValue(1)
+            self.dock.horizontalTimeSlider.setValue(self.dock.horizontalTimeSlider.minimum())
             self.dock.pushButtonPlay.setChecked(False)
             self.dock.pushButtonPlay.setIcon(QIcon(":/images/play.png"))
             return
@@ -1162,7 +1184,7 @@ class TimeManagerGuiControl(QObject):
         if value == None:
             value = self.dock.horizontalTimeSlider.value() 
             
-        if value <= 24:
+        if value <= self.dock.horizontalTimeSlider.maximum():
             if self.dock.radioButton_origin.isChecked():
                 self.myPolygonRenderer.setClassAttribute("o" + str(value))
             else:
@@ -1180,7 +1202,7 @@ class TimeManagerGuiControl(QObject):
             self.iface.legendInterface().refreshLayerSymbology(self.regionLayer)
         else:
             self.qTimer.stop()
-            self.dock.horizontalTimeSlider.setValue(1)
+            self.dock.horizontalTimeSlider.setValue(self.dock.horizontalTimeSlider.minimum())
         pass
     
     
@@ -1193,4 +1215,142 @@ class TimeManagerGuiControl(QObject):
         url = QUrl("C:/Users/jj/.qgis2/python/plugins/timemanager/broswer/svg.html");
         #url.addQueryItem("abc", "123");
         QDesktopServices.openUrl(url);
+        
+        
+        
+        
+        
+        
+    # 显示选择目录对话框
+    def showSelectDirectoryDialog(self):
+        if self.setFlag == 0:
+            self.selectDirectoryDialog = uic.loadUi(os.path.join(self.path, SELECT_DIRECTORY_DIALOG))
+            self.selectDirectoryDialog.lineEdit.clear()
+            self.selectDirectoryDialog.pushButton.clicked.connect(self.select_dictionary)
+            self.selectDirectoryDialog.button_box.accepted.connect(self.loadCsvFiles)
+            self.selectDirectoryDialog.show()
+        else:
+            self.setTrajectoryTimeSlider()
+    
+    def select_dictionary(self):
+        filepath = QFileDialog.getExistingDirectory(self.selectDirectoryDialog, self.tr(u'select a dictionary'),
+                                                    "C:\Users",
+                                                    QFileDialog.ShowDirsOnly 
+                                                    | QFileDialog.DontResolveSymlinks)
+        # print filepath
+        if filepath.strip():
+            self.selectDirectoryDialog.lineEdit.setText(filepath)
+            
+    
+    def loadCsvFiles(self):
+        # 清除画布上的所有图层
+        # QgsMapLayerRegistry.instance().removeAllMapLayers()
+        
+        # 图标样式，圆，大小设为1
+        # symbol = QgsMarkerSymbolV2.createSimple({'name':'circle', 'size':'1'})
+        
+        self.filepath = self.selectDirectoryDialog.lineEdit.text()
+        
+        # 获取文件夹中的所有文件，并过滤不是csv格式的文件
+        files = os.listdir(self.filepath)
+        flag = 0
+        for file in files:
+            if not os.path.isdir(file) and '_0.csv' in file and not file.startswith('.') :
+                uri = "file:///" + self.filepath + "/" + file + "?delimiter=%s&crs=epsg:4326&xField=%s&yField=%s" % (",", "longitude", "latitude")
+                self.file = file
+                self.vlayer = QgsVectorLayer(uri, os.path.splitext(file)[0], "delimitedtext")
+                self.vlayer.rendererV2().symbol().setSize(1.0);
+                self.vlayer.rendererV2().symbol().setColor(QtGui.QColor('#ffff15'));
+                if self.vlayer.isValid():
+                    QgsMapLayerRegistry.instance().addMapLayer(self.vlayer)
+                    flag = 1
+                    break
+        if flag == 0:
+            QMessageBox.information(self.iface.mainWindow(), 'Error',
+                                    u'文件夹中没有初始文件（以_0.csv结尾的文件）')
+        else:
+            self.setTrajectoryTimeSlider()
+            
+    def setTrajectoryTimeSlider(self):
+        if self.setFlag == 0:
+            self.setFlag = 1
+            self.dock.pushButtonOptions.setDisabled(True)
+            self.dock.dateTimeEditCurrentTime.setDisabled(True)
+            self.dock.pushButtonOdAnalysis.setDisabled(True)
+            self.dock.pushButtonBack.setDisabled(True)
+            self.dock.pushButtonForward.setDisabled(True)
+            self.dock.spinBoxTimeExtent.setValue(1)
+            self.setTimeFrameType(u'分钟')
+            
+            self.dock.spinBoxTimeExtent.setDisabled(True)
+            self.dock.comboBoxTimeExtent.setDisabled(True)
+            self.dock.pushButtonSetTimeSlider.setDisabled(True)
+            self.dock.pushButtonSetPolygonTimeSlider.setDisabled(True)
+            self.initTrajectoryTimeSlider()
+            
+            # 当设置为时序控制时绑定不同的触发方法
+            self.dock.horizontalTimeSlider.valueChanged.connect(self.TrajectoryTimeSliderChanged)
+            self.dock.pushButtonPlay.clicked.connect(self.autoPlay)
+            
+            self.dock.pushButtonSetTrajectorySlider.setText(u"取消设置")
+            
+            self.signalTimeFrameType.emit(u'分钟')
+            
+            
+        else :
+            self.setFlag = 0
+            self.dock.pushButtonOptions.setDisabled(False)
+            self.dock.dateTimeEditCurrentTime.setDisabled(False)
+            self.dock.pushButtonOdAnalysis.setDisabled(False)
+            self.dock.pushButtonBack.setDisabled(False)
+            self.dock.pushButtonForward.setDisabled(False)
+            self.dock.spinBoxTimeExtent.setDisabled(False)
+            self.dock.comboBoxTimeExtent.setDisabled(False)
+            self.dock.pushButtonSetTimeSlider.setDisabled(False)
+            self.dock.pushButtonSetPolygonTimeSlider.setDisabled(False)
+            
+            self.dock.pushButtonSetTrajectorySlider.setText(u"设置区域时序")
+            
+            # self.qTimer = None
+            # self.layer = None
+            self.dock.horizontalTimeSlider.valueChanged.connect(self.currentTimeChangedSlider)
+            self.dock.pushButtonPlay.clicked.connect(self.playClicked)
+            
+    def initTrajectoryTimeSlider(self):
+        min = 0
+        max = 287
+        step = 1
+        self.dock.labelStartTime.setText(str(min))
+        self.dock.labelEndTime.setText(str(max))
+        self.dock.horizontalTimeSlider.setMinimum(min)
+        self.dock.horizontalTimeSlider.setMaximum(max)
+        self.dock.horizontalTimeSlider.setSingleStep(step)
+        #self.dock.horizontalTimeSlider.valueChanged.connect(self.timeSliderChanged)
+        
+        # 定时器
+        self.qTimer = QTimer(self)
+        self.qTimer.timeout.connect(self.incrementValue)
+        
+    def TrajectoryTimeSliderChanged(self, value = None):
+        if value == None:
+            value = self.dock.horizontalTimeSlider.value() 
+            
+        if value <= self.dock.horizontalTimeSlider.maximum():
+            
+            # file = os.path.splitext(self.file)[0].split('_')[0] + "_" + str(value)
+            hour = value / 12
+            num = value % 12
+            if hour < 10:
+                file = "0" + str(hour) + "_" + str(num)
+            else:
+                file = str(hour) + "_" + str(num)
+                
+            uri = "file:///" + self.filepath + "/" + file + ".csv" + "?delimiter=%s&crs=epsg:4326&xField=%s&yField=%s" % (",", "longitude", "latitude")
+            self.vlayer.setDataSource(uri, file, "delimitedtext")
+#             self.regionLayer.triggerRepaint()
+#             self.iface.legendInterface().refreshLayerSymbology(self.regionLayer)
+        else:
+            self.qTimer.stop()
+            self.dock.horizontalTimeSlider.setValue(self.dock.horizontalTimeSlider.minimum())
+        pass
         
