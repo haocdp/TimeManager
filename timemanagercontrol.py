@@ -697,21 +697,21 @@ class TimeManagerControl(QObject):
             
             if taz is None:
                 QMessageBox.information(self.iface.mainWindow(), 'Error',
-                                        "未找到区域图层")
+                                        u"未找到区域图层")
                 return
             
             emptyLayer = layers.get('line20170817171328528')
             
             if emptyLayer is None:
                 QMessageBox.information(self.iface.mainWindow(), 'Error',
-                                        "未找到区域图层")
+                                        u"未找到区域图层")
                 return
             
             odLayer = layers.get('tripsod20140227_220170816095623877')
             
             if odLayer is None:
                 QMessageBox.information(self.iface.mainWindow(), 'Error',
-                                        "未找到轨迹点图层")
+                                        u"未找到轨迹点图层")
                 return
             odAnalysis = ODAnalysis(self.iface, taz, odLayer, emptyLayer)
             odAnalysis.calculateCentroid()
@@ -722,7 +722,7 @@ class TimeManagerControl(QObject):
             odAnalysis.drawConnectLine()
         else:
             QMessageBox.information(self.iface.mainWindow(), 'Error',
-                                        "获取图层出错或者没有可用图层")
+                                        u"获取图层出错或者没有可用图层")
 
     def setTimeSlider(self):
         self.guiControl.initTimeSlider()

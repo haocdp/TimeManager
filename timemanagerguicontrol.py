@@ -1309,7 +1309,7 @@ class TimeManagerGuiControl(QObject):
             self.dock.pushButtonSetTimeSlider.setDisabled(False)
             self.dock.pushButtonSetPolygonTimeSlider.setDisabled(False)
             
-            self.dock.pushButtonSetTrajectorySlider.setText(u"设置区域时序")
+            self.dock.pushButtonSetTrajectorySlider.setText(u"设置轨迹点时序")
             
             # self.qTimer = None
             # self.layer = None
