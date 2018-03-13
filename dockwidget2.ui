@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1157</width>
-    <height>172</height>
+    <width>1243</width>
+    <height>179</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>1157</width>
-    <height>172</height>
+    <height>179</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -254,9 +254,35 @@
        </widget>
       </item>
       <item>
+       <widget class="QComboBox" name="comboBoxSelectMode">
+        <item>
+         <property name="text">
+          <string>浮动车数据</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>海洋数据</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>手机数据</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButtonOdAnalysis">
         <property name="text">
          <string>生成od图层</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_mc">
+        <property name="text">
+         <string>mc数据处理</string>
         </property>
        </widget>
       </item>
@@ -276,7 +302,7 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <layout class="QHBoxLayout" name="horizontalLayout_floatCar">
       <item>
        <widget class="QPushButton" name="pushButtonSetTimeSlider">
         <property name="text">
@@ -322,6 +348,20 @@
        <widget class="QPushButton" name="pushButtonBroswerDialog">
         <property name="text">
          <string>浏览窗口</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonMarineOD">
+        <property name="text">
+         <string>设置海洋数据时序</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonPhone">
+        <property name="text">
+         <string>设置手机数据时序</string>
         </property>
        </widget>
       </item>
